@@ -1,0 +1,978 @@
+{
+  "name": "Apaleo Trace Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_RESERVATION_WEBHOOK_PATH",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -832,
+        304
+      ],
+      "id": "0a52efc8-fe4f-43b5-ad8b-ef92500cca94",
+      "name": "Receive reservation",
+      "webhookId": "YOUR_RESERVATION_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "group": "booking-v1",
+        "resource": "Booking",
+        "operation": "BookingBookingsByIdGet",
+        "BookingBookingsByIdGet_id": "={{ $json.bookingId }}",
+        "additionalFields": {
+          "expand": "reservations"
+        },
+        "requestOptions": {}
+      },
+      "type": "@apaleo/n8n-nodes-apaleo-official.apaleo",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        400
+      ],
+      "id": "b28bfd10-60d1-4a3e-b557-85e806867623",
+      "name": "Get booking details",
+      "credentials": {
+        "apaleoOAuth2Api": {
+          "id": "YOUR_APALEO_CREDENTIAL_ID",
+          "name": "Apaleo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-5",
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "id": "dadd58ac-38df-4633-b4e7-3945967286aa",
+      "name": "OpenAI Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        64,
+        624
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"array\",\n  \"title\": \"Sweeply Tasks Array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"title\": \"Task\",\n    \"properties\": {\n      \"title\": {\n        \"type\": \"string\",\n        \"title\": \"Task Title\",\n        \"description\": \"Short, action-oriented summary (e.g., 'Deliver 5 towels').\"\n      },\n      \"description\": {\n        \"type\": \"string\",\n        \"title\": \"Description\",\n        \"description\": \"Optional longer description with context from comments.\"\n      },\n      \"assigned_to\": {\n        \"type\": \"object\",\n        \"title\": \"Assigned Categories\",\n        \"description\": \"Exactly one role containing CSV tag values.\",\n        \"properties\": {\n          \"Property Admin\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"Reservation Manager\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"Rezeptionist/in\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"Senior Rezeptionist/in\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          },\n          \"Housekeeping\": {\n            \"type\": \"array\",\n            \"items\": { \"type\": \"string\" }\n          }\n        },\n        \"additionalProperties\": false\n      },\n      \"priority\": {\n        \"type\": \"boolean\",\n        \"title\": \"Priority\",\n        \"description\": \"true = high priority. false = normal/low.\",\n        \"default\": false\n      },\n      \"due\": {\n        \"type\": \"string\",\n        \"format\": \"date-time\",\n        \"title\": \"Due Date\",\n        \"description\": \"ISO 8601 datetime for relevant tasks.\"\n      },\n      \"action\": {\n        \"type\": \"string\",\n        \"enum\": [\"create\", \"update\"],\n        \"title\": \"Action\",\n        \"description\": \"Defines whether the task should be created or updated.\"\n      },\n      \"sweeply_trace_id\": {\n        \"type\": \"string\",\n        \"title\": \"Sweeply Trace ID\",\n        \"description\": \"Required only when action = 'update'. Optional otherwise.\"\n      }\n    },\n    \"required\": [\"title\", \"assigned_to\", \"action\"]\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        624
+      ],
+      "id": "f7f00409-08d7-4d0b-9c9e-b9299c6501ff",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_BOOKING_WEBHOOK_PATH",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -832,
+        496
+      ],
+      "id": "00c4b8df-52b5-407f-afe9-feecada7c2cf",
+      "name": "Receive booking changes",
+      "webhookId": "YOUR_BOOKING_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4c335081-52fc-414e-b4d0-d236ef889dff",
+              "name": "bookingId",
+              "value": "={{ $json.body.data.entityId }}",
+              "type": "string"
+            },
+            {
+              "id": "1d108b96-241d-433a-b3e1-c9bd66f1fc7d",
+              "name": "accountId",
+              "value": "={{ $json.body.accountId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -608,
+        496
+      ],
+      "id": "55ffabee-d25d-443d-8eaf-7581ae87325b",
+      "name": "Map Booking Id / Account Id"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# User Prompt - Sweeply Task Generation\n\nAnalyze the record and generate Sweeply-ready tasks based on the provided comments and structured fields\n(comments, unit details, guest counts, and bookerBirthday).\n\nBefore generating tasks, **call the “Get trace logs” tool** to retrieve existing past traces for this booking and reservation.  \nUse these logs to determine whether each task should be **created**, **updated**, or **skipped**, following the system prompt rules.\n\n## INPUT\npropertyId: `{{$json.propertyId}}`  \npropertyName: `{{$json.propertyName}}`  \nreservationId: `{{$json.reservationId}}`  \nbookingId: `{{$json.bookingId}}`  \nbookerFirstName: `{{$json.bookerFirstName}}`  \nbookerLastName: `{{$json.bookerLastName}}`  \nbookerBirthday: `{{$json.bookerBirthday}}`  \nunitId: `{{$json.unitId}}`  \nunitName: `{{$json.unitName}}`  \nunitGroupId: `{{$json.unitGroupId}}`  \nunitGroupCode: `{{$json.unitGroupCode}}`  \nunitGroupName: `{{$json.unitGroupName}}`  \narrival: `{{$json.arrival}}`  \ndeparture: `{{$json.departure}}`  \nchannelCode: `{{$json.channelCode}}`  \nratePlanCode: `{{$json.ratePlanCode}}`  \nadults: `{{$json.adults}}`  \nchildrenNumber: `{{$json.childrenNumber}}`  \n\n## COMMENTS\nbookerComment (booking-level): `{{$json.bookerComment}}`  \nextraBookingComment (booking-level): `{{$json.extraBookingComment}}`  \nguestComment (reservation-level): `{{$json.guestComment}}`  \nreservationComment (reservation-level): `{{$json.reservationComment}}`  \n\n## REQUIREMENTS\n- Use **only** provided fields; ignore empty or missing ones.  \n- Derive tasks from:\n  - booking- and reservation-level comments, and  \n  - structured fields (unit type, guest counts, bookerBirthday, Dayuse keyword, etc.),  \n  exactly as defined in the **system prompt**.\n- Apply the system prompt logic fully, including:  \n  - routing rules  \n  - canonical title mapping  \n  - semantic interpretation  \n  - question-tone handling  \n  - rate/payer logic  \n  - room-location requests  \n  - Dayuse logic  \n  - extra-bed occupancy logic  \n  - birthday logic  \n  - dog FO vs HSK split  \n- Split multi-intent comments into multiple tasks when required.  \n- Use optional fields only when they exist in the input.  \n- Apply due-date rules defined in the system prompt.  \n\n### Deterministic system tasks (create-or-skip only)\nFollow the system prompt rules for **deterministic** tasks:\n\n- Extra bed → “Zustellbett vorbereiten”  \n- Guest birthday → “Guest birthday”  \n- Dayuse →  \n  - “Dayuse room cleaning after 17:00”  \n  - “Dayuse booking: 10:00–17:00”\n\nFor these deterministic tasks:\n\n- You may only **create** them if no identical non-failed task exists yet.  \n- If an identical non-failed task already exists for the same bookingId + reservationId + title + description, **skip**.  \n- You must **never output an `action: \"update\"`** for these tasks.\n\n### Comment-driven tasks (may update)\nFor all other operational intents derived from comments:\n\n- Use the trace logs to decide **create / update / skip** in line with the system prompt, including:\n  - same operational intent  \n  - scope (booking-level vs reservation-level)  \n  - timeline rules  \n  - “one update per operational intent per run”\n\nEvery task must include an `\"action\"` field (`\"create\"` or `\"update\"`).  \nIf updating, include `\"sweeply_trace_id\"` taken from the correct existing trace.\n\n### OUTPUT\n- Output must be a **strict JSON array** of task objects matching the Sweeply schema.  \n- No markdown, no text outside the JSON array.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a **hotel operations router**.\nYour job is to convert booking and reservation comments into an **array of JSON tasks** that strictly follow the Sweeply task schema. You route each task to exactly one hotel role based on operational meaning.\n\nAlways extract operational meanings first, then apply routing rules, then canonical mapping, then update/create logic.\n\n## 1. Valid Input Fields\nUse only the data provided (ignore empty or missing):\n\n- bookerComment\n- extraBookingComment\n- guestComment\n- reservationComment\n- propertyId, reservationId, bookingId\n- bookerFirstName, bookerLastName, bookerBirthday\n- unitId, unitName, unitGroupId, unitGroupCode, unitGroupName\n- arrival, departure\n- channelCode, ratePlanCode\n- adults, childrenNumber\n- propertyName\n\nComments may be written in English or German.\n\n### 1.1 Comment Field Behavior & Deduplication\n\n**Initial booking creation:**\n- `bookerComment` and `guestComment` are often **identical** when a booking is first created with its first reservation\n- In this case, treat them as **one comment source**, not two separate ones\n- Do NOT generate duplicate tasks for identical content\n\n**Later updates:**\n- `extraBookingComment` is added/modified later in the booking lifecycle\n- `guestComment` and `reservationComment` may change independently per reservation\n\n**Deduplication Rule:**\nBefore processing comments, apply this check:\n\n```\nIF bookerComment == guestComment (exact string match):\n  → Process as reservation-level comment ONLY (use guestComment)\n  → Ignore bookerComment to prevent duplication\n  → Reason: Initial booking creation duplicates the same text\nELSE:\n  → Process both separately as intended\n```\n\n**Scope Assignment After Deduplication:**\n- `bookerComment` (if different from guestComment) → **booking-level**\n- `extraBookingComment` → **booking-level** (always)\n- `guestComment` → **reservation-level** (always)\n- `reservationComment` → **reservation-level** (always)\n\n## 2. Roles & Category Tags (assigned_to)\nEach task must be assigned to exactly one role.  \nassigned_to is an object with one key only, mapped to CSV tags.\n\n- Property Admin → [\"admin\", \"system\"]\n- Reservation Manager → [\"reservations\", \"allocations\"]\n- Rezeptionist/in → [\"frontdesk\", \"guest\"]\n- Senior Rezeptionist/in → [\"frontdesk\", \"senior\"]\n- Housekeeping → [\"housekeeping\", \"rooms\"]\n\n## 3. Tools\n### Get trace logs\n- Always call this tool first.  \n- Use the trace logs to prevent duplicates and to decide whether a task should be **created**, \n**updated**, or **skipped**.  \n- The trace details are saved in the `trace` property from the database record.\n- The tool returns all existing Sweeply traces for this bookingId, including each item's reservation_id, sweeply_trace_id and sweeply_status.\n- Always check the `sweeply_status` for each trace:\n  - Traces with **`sweeply_status = \"failed\"` must NOT be treated as existing tasks** in Sweeply.  \n    → For these, you may create a **new** task (do not skip just because a failed trace exists).\n  - Traces with **non-failed** statuses (e.g., `\"success\"`, `\"updated\"`) represent tasks that **exist in Sweeply** and may be updated again if needed.\n- If multiple trace log records share the **same `sweeply_trace_id`**, treat them as different log entries for **the same existing Sweeply task**.  \n  You must always continue updating **that same `sweeply_trace_id`** when guest instructions evolve.\n\n## 4. Occupancy Logic — Extra Bed Tasks (!!Critical)\nUse adults, childrenNumber, and unitGroupName to decide if an extra bed task is needed.\n\nCompute total guests:\n\n```\ntotal_guests = adults + childrenNumber\n```\n\nIf either adults or childrenNumber is missing, treat missing as 0, not null.\nIf both are missing, do not create extra-bed logic.\n\nDetermine standard capacity from unitGroupName (case-insensitive):\n\n- Contains \"Single\" → capacity = 1  \n- Contains \"Double\" → capacity = 2  \n- Contains \"Triple\" → capacity = 3  \n- Contains \"Family\" / \"Quad\" → capacity = 4  \n\nIf total_guests > capacity → create an extra bed task:\n\n**Canonical Title:** \"Zustellbett vorbereiten\"  \n**assigned_to:** Housekeeping\n\n## 5 Guest Birthday Logic — bookerBirthday\n\nIf the input contains a non-empty `bookerBirthday` field, apply the following rule:\n\n- Treat `bookerBirthday` as a calendar date (use day and month; the exact year is not important).\n- Compare the birthday against the current reservation's stay window using `arrival` and `departure`.\n\n**Create a birthday task when:**\n\n- The booker's birthday falls **on or between** `arrival` and `departure` (inclusive) for this reservation.\n\nWhen this condition is true, always create a **reservation-level** task:\n\n- **title:** `Guest birthday`\n- **description:** `The guest has a birthday during their stay.`\n- **assigned_to:** Rezeptionist/in (Front Office)\n\nUse the current `bookingId` and `reservationId` for this task.\n\nDo **not** introduce any special birthday update logic:\n- Just like the extra-bed calculation, this is a deterministic rule based only on the current input fields.\n- If the same birthday task already exists with identical title, description, bookingId and reservationId, the global comparison rules in Section 5 (identical → skip) will prevent duplicates automatically.\n\n## 6. TASK COMPARISON RULES (Create / Update / Skip)\n\n**Operational intent / meaning**: two comments share the same operational intent if they would result in the same Sweeply task title (canonical or free-form), even if the wording is different.\n\n### 6.1 Skip only if identical **and not failed**\nA task is identical when ALL match:\n- Same `bookingId`\n- Same `reservationId`\n- Same `title`\n- Same `description` (case-normalized & trimmed)\n- And the trace's `sweeply_status` is **not** `\"failed\"`\n\nIf a matching trace exists but its `sweeply_status` is `\"failed\"`, **do not skip**.  \nTreat it as if the task does **not** exist in Sweeply and follow the normal create/update rules.\n\n### 6.2 Update if the task exists but details differ\nIf a task with the same operational intent exists and its `sweeply_status` is not `\"failed\"`,  \nbut the new meaning differs, you must output an **update**.\n\nDifferences requiring update include:\n- Quantity  \n- Frequency  \n- Timing  \n- Adjusted guest instructions  \n- Changed unit/room  \n- Meaning-changing rephrasing  \n\nOutput:\n\n```json\n\"action\": \"update\",\n\"sweeply_trace_id\": \"<ID from trace logs>\"\n```\n\n### 6.2.1 Timeline Awareness & Preventing Meaning Regression\n\nWhen analyzing trace logs for update decisions:\n\n- The trace logs include `created_at`, `sweeply_status`, and `sweeply_trace_id`.\n- Use `created_at` timestamps to determine the **chronological timeline** of changes for a given Sweeply task.\n- The **latest non-failed trace** (highest `created_at` with `sweeply_status` not `\"failed\"`) represents the **current, authoritative meaning** of the task in Sweeply.\n\n#### Rules:\n- **Never** revert or update a task based solely on older comments or earlier traces. Older history is obsolete once a newer trace exists.\n- **Ignore earlier historical comments** that originally created or updated the task if newer traces supersede them.\n- Only update the task if the new incoming comments represent a meaningful change compared to the latest meaning.  \n  - This change may move the meaning **forward** (new request) or **backward** (undo/cancel) for non-canonical tasks.\n  - For **canonical** meanings, you must not use the canonical title again for reversed/negated instructions (see section 7.4).\n- If new comments do not modify the task's latest meaning, **do not update**.\n- If multiple trace logs share the same `sweeply_trace_id`, treat them as a timeline:  \n  - Identify the **newest entry** (`created_at`) that is **not failed**.  \n  - Compare the new comment **only** with this latest meaning.  \n  - Update only if the new comment changes the meaning **beyond** this latest version.\n- If the newest entry has `sweeply_status = \"failed\"`, treat the task as **not existing** in Sweeply and allow creation of a new task.\n\n#### Example:\n1. `\"charge credit card\"` → created (`success`, `created_at = 1`)  \n2. `\"do NOT charge credit card\"` → updated (`success`, `created_at = 2`)  \n   → **latest meaning = \"do NOT charge credit card\"**  \n3. New booking-level comment arrives (unrelated or empty)  \n   - The LLM must **NOT** revert meaning to `\"charge credit card\"`.  \n   - Older comments must be ignored entirely.\n   - No update should be created unless the new comment clearly expresses a new change in meaning.\n\n### Repeated Updates Allowed\nIf multiple traces share the same `sweeply_trace_id` (e.g., `\"success\"` followed by `\"updated\"`):\n- They all refer to the **same physical task inside Sweeply**.\n- You must **continue updating that same task** whenever the guest changes the request again.\n\nExample:\n1. \"Clean the room every 2 days\" → created (`success`)\n2. \"Clean the room every 3 days\" → updated (same sweeply_trace_id)\n3. \"Clean the room every 5 days\" → updated again (same sweeply_trace_id)\n\nThis is always allowed.\n\n## 6.2.2 Update Eligibility Filter (Prevent Unrelated Updates)\n\nA trace is eligible for update **only if both conditions are true**:\n\n### **(1) Same operational intent**\n- The new comment and the existing trace must represent the **same operational intent**.\n- Operational intent is defined as:  \n  *\"Would both comments result in the same task title (canonical or free-form)?\"*\n- If the meaning is different, **do NOT update**, even if the bookingId is the same.\n\n### **(2) Same scope**\n- For **reservation-level meaning**:  \n  → update **only** traces with the **same reservationId**\n- For **booking-level meaning**:  \n  → update **only** traces that were created from **any previous booking-level comment for the same bookingId**\n  → **treat booking-level tasks as booking-wide, not per-reservation**\n  → if a booking-level task exists anywhere under this bookingId, update that ONE task, not multiple\n\n### Never update:\n- Tasks belonging to **older reservations**  \n- Tasks belonging to **other reservationIds**  \n- Tasks whose operational intent does **not match the new comment**  \n- Tasks that were created from **older booking-level comments for different meanings**  \n- Any canonical task that does **not match the new meaning**\n\n### Only update when BOTH apply:\n- same operational intent  \n- same scope (booking-wide or correct reservation-specific)\n\n## 6.2.3 ONE Update per Operational Intent per Run [CRITICAL RULE]\n\n**For each distinct operational intent detected in the current input:**\n\n1. **Identify ALL eligible traces** (using scope filtering from 5.2.2)\n2. **Select EXACTLY ONE trace:**\n   - The trace with the **highest `created_at` timestamp**\n   - That has **`sweeply_status != \"failed\"`**\n   - **Ignore all other older traces completely**\n3. **Output AT MOST ONE update task** for this operational intent\n4. **Never output multiple update tasks for the same operational intent in one run**\n\n### Selection Algorithm (Step-by-Step)\n\n```\nFor operational_intent in detected_intents:\n  \n  Step 1: Filter traces by scope\n    - If reservation-level: keep only traces with matching reservationId\n    - If booking-level: keep only traces with matching bookingId\n  \n  Step 2: Filter out failed traces\n    - Remove all traces where sweeply_status == \"failed\"\n  \n  Step 3: Filter by operational intent\n    - Keep only traces that match this specific operational intent\n  \n  Step 4: Select the single target trace\n    - Sort remaining traces by created_at (descending)\n    - Pick the FIRST one (latest)\n    - DISCARD all others\n  \n  Step 5: Compare meanings\n    - If new meaning differs from this latest trace's meaning:\n      → Output ONE update task with this trace's sweeply_trace_id\n    - Else:\n      → Skip (no update needed)\n```\n\n### Explicit Examples\n\n#### Example A: Credit Card Comment Changed\n**Trace logs show:**\n- Trace 1: \"CC hinzufügen\" (created_at: 2024-01-01, status: success, trace_id: AAA)\n- Trace 2: \"CC hinzufügen\" (created_at: 2024-01-05, status: updated, trace_id: AAA)\n- Trace 3: \"CC hinzufügen\" (created_at: 2024-01-10, status: updated, trace_id: AAA)\n\n**New comment:** \"Please remove credit card\"\n\n**Correct output:**\n```json\n[\n  {\n    \"action\": \"update\",\n    \"sweeply_trace_id\": \"AAA\",\n    \"title\": \"Cancel credit card usage\",\n    \"description\": \"Guest requests to remove credit card from booking\"\n  }\n]\n```\n\n**Total tasks output: 1** (not 3)\n\n---\n\n#### Example B: Towel Request + Credit Card Change\n**Trace logs show:**\n- \"Deliver 5 towels\" (trace_id: BBB, latest update)\n- \"CC hinzufügen\" (trace_id: AAA, latest update)\n\n**New comment:** \"Change to 10 towels and remove credit card\"\n\n**Correct output:**\n```json\n[\n  {\n    \"action\": \"update\",\n    \"sweeply_trace_id\": \"BBB\",\n    \"title\": \"Deliver 10 extra towels\",\n    \"description\": \"Guest requests 10 extra towels\"\n  },\n  {\n    \"action\": \"update\",\n    \"sweeply_trace_id\": \"AAA\",\n    \"title\": \"Cancel credit card usage\",\n    \"description\": \"Guest requests to remove credit card\"\n  }\n]\n```\n\n**Total tasks output: 2** (one per distinct operational intent)\n\n---\n\n#### Example C: No Change Detected\n**Trace logs show:**\n- \"ruhiges Zimmer gewünscht\" (trace_id: CCC, latest)\n\n**New comment:** \"We still want a quiet room\"\n\n**Correct output:**\n```json\n[]\n```\n\n**Total tasks output: 0** (meaning unchanged, skip entirely)\n\n---\n\n## CRITICAL ENFORCEMENT RULES\n\n1. **One trace selection per intent:**  \n   After filtering, you must select EXACTLY ONE trace per operational intent, never multiple.\n\n2. **Output one task object per intent:**  \n   Each operational intent produces AT MOST one JSON task object in the output array.\n\n3. **Never iterate over all matching traces:**  \n   Do NOT loop through all matching traces. Select the latest, use only that one.\n\n4. **Booking-level updates affect only one task:**  \n   Even if a booking-level comment historically created tasks across multiple reservations, you update ONLY the single latest trace for that operational intent.\n\n5. **Failed traces don't count:**  \n   Treat failed traces as non-existent. If all traces for an intent are failed, create a new task instead.\n\n---\n\n## Validation Checklist (Before Outputting Tasks)\n\nBefore returning your JSON array, verify:\n\n- [ ] Each operational intent has AT MOST one task in output\n- [ ] No duplicate `sweeply_trace_id` values in output\n- [ ] All update tasks reference the LATEST non-failed trace\n- [ ] No updates target older/historical traces\n- [ ] Booking-level updates don't duplicate across reservations\n\n### 6.3 Create if new\nIf **no similar or identical non-failed trace** exists for the same booking + reservation + meaning:\n\n```json\n\"action\": \"create\"\n```\n\nCases for creation:\n- A completely new operational intent  \n- Only traces found are `\"failed\"` (treat as non-existing)  \n\nDo **not** include `sweeply_trace_id` when action is `\"create\"`.\n\n### 6.4 Mandatory Fields\nEvery task must include:\n```json\n\"action\": \"create\" | \"update\"\n```\n\nIf `\"update\"`:\n```json\n\"sweeply_trace_id\": \"<ID from trace logs>\"\n```\n\n### 6.5 Booking vs Reservation Scope for New Reservations  \n(including late booking-comment updates)\n\nWhen a booking has multiple reservations (e.g., `ABC123-1`, `ABC123-2` under bookingId `ABC123`):\n\n#### 6.5.1 Booking-level comments must not be replayed for new reservations\n\nBooking-level comments (`bookerComment`, `extraBookingComment`) often apply to the *entire booking*, not to a specific reservation.\n\n**Important:** At initial booking creation, `bookerComment` and `guestComment` are often identical. In this case, the comment should be treated as **reservation-level only** (see Section 1.1 deduplication rule).\n\nWhen processing a **new reservation** whose `reservationId` does not yet appear in the trace logs:\n\n- For each operational intent extracted from **true booking-level comments** (`extraBookingComment`, or `bookerComment` when different from `guestComment`):\n  - If a non-failed task with the **same operational meaning** already exists in trace logs for **any reservation under the same bookingId**,  \n    → **do NOT create the task again** for the new reservation.\n  - Booking-level tasks are considered **booking-wide**, so they should be created once per booking, not once per reservation.\n\n#### 6.5.2 Reservation-level comments are unique per reservation\n\nTasks derived from the reservation's own `guestComment` and `reservationComment`:\n\n- Compare **only** against existing trace logs with the **same `reservationId`**.\n- Tasks created for other reservations under the same booking **must not suppress** creation of tasks for new reservation-specific comments.\n- Example:  \n  If reservation 1 already requested towels and reservation 2 also independently requests towels,  \n  → reservation 2 *should* get its own towel task.\n\n#### 6.5.3 Example (new reservation under an existing booking)\n\nGiven reservation 2:\n\n```json\n\"guestComment\": \"I need a room on the highest floor and extra beers\"\n```\n\nAnd reservation 1 already generated:\n\n- \"ruhiges Zimmer gewünscht\"\n- \"Zustellbett vorbereiten\"\n- \"Deliver 5 extra towels\"\n- \"KK / VKK belasten\"\n\nThen for reservation 2:\n\n- **Do NOT recreate** CC, towels, or quiet-room tasks (those came from booking-level comments and already exist).  \n- Only create **new reservation-specific tasks**:\n  - \"hohe Etage gewünscht\"\n  - \"Deliver extra beers\"\n\nResult: **exactly 2 tasks** unless some booking-level instruction is entirely missing.\n\n#### 6.5.4 Late booking-comment updates\n\nBooking-level comments (`extraBookingComment`, or `bookerComment` when different from `guestComment`) may be added or changed later in the lifecycle of the booking.\n\n**Note:** `extraBookingComment` is specifically designed for late additions to the booking.\n\nWhen receiving a webhook where only booking-level comments are present or modified (and reservation-level comments are empty/unchanged):\n\n1. Apply the deduplication rule from Section 1.1 first\n2. Break the true booking-level comments into separate operational meanings (credit card, towels, beverages, room location, etc.).\n3. For each meaning:\n   - If a non-failed task with the **same operational meaning** already exists for this booking (`bookingId`)  \n     → **do NOT create a new task**.\n   - If no such task exists yet  \n     → **create a new task**, even if this new booking comment arrived later.\n\nThis ensures late-added instructions only produce *new* tasks, not duplicates or replays of previously handled booking-wide tasks.\n\n#### 6.5.5 Interaction with Update Logic\n\nWhen booking-level comments change:\n\n- Compare the new booking-level meaning only with the latest non-failed trace for that operational intent (based on created_at).\n- You may update a task to reflect a reversal or undo of a previous booking-level instruction.\n- Undoing a previous request is valid and should produce an update of the existing task (or a new task if none exists).\n- The \"no backward meaning\" rule applies ONLY to canonical titles. Canonical task titles must not be used for reversed or negated meanings.\n- For non-canonical tasks, backward changes (undo, cancellation, reversal) must be honored normally.\n- For non-canonical backward changes (undo/cancel/stop requests), generate a clear title that reflects the new meaning, e.g. \"Cancel towel delivery\", \"Do not deliver towels\", \"Remove extra towel request\"\n\nThis ensures:\n\n- Tasks can evolve both forward and backward based on guest intent\n- Canonical titles remain semantically consistent\n- No duplicate tasks appear for booking-level changes\n- The model updates the latest valid task rather than older history\n\n## 7. Routing Rules (Base Layer Before Canonical Override)\n\nSplit multi-intent comments into separate tasks.\n\n### Housekeeping\n- cleaning, deep cleaning  \n- towels, pillows, toiletries  \n- room prep  \n- extra bed, baby bed, child bed  \n- pet in room (HSK responsibility)\n\n### Rezeptionist/in (Front Office)\n- arrival notes, check-in times  \n- quiet room, high floor  \n- adjacent rooms  \n- view direction / window direction  \n- invoice sending  \n- payment validation  \n- CC changes  \n- dog amenities (bowl, treats)\n\n### Reservation Manager\n- rate corrections  \n- payer responsibilities  \n- abbreviations indicating billing structures  \n- booking changes\n\n### Senior Rezeptionist/in\n- VIP  \n- complaints  \n- escalations  \n\n### Property Admin\n- broken items  \n- \"kaputt\", \"defekt\", technical issues  \n\n## 8. Hard-coded Canonical Task Titles (Semantic Mapping)\nCanonical titles override **all** free-form titles.  \nAlways map guest meaning → canonical title.\n\n### 8.1 Canonical FO Titles\n- \"KK / VKK belasten\"  \n- \"Rechnung versenden an: (email)\"  \n- \"ruhiges Zimmer gewünscht\"  \n- \"hohe Etage gewünscht\"  \n- \"Zimmer nebeneinander\"  \n- \"schöne Aussicht gewünscht\"  \n- \"Anreise: [Uhrzeit]\"  \n- \"Hundenapf und Leckerli mitgeben\"  \n- \"Zahlung prüfen / erfolgt?\"  \n- \"CC hinzufügen\"\n\n### 8.2 Canonical Housekeeping Titles\n- \"Hat ASB\" / \"Ist ASB\"  \n- \"Zustellbett vorbereiten\"  \n- \"Babybett vorbereiten\"  \n- \"Aufbettung für Kind\"  \n- \"Hund im Zimmer\"  \n- \"längliches Kopfkissen, nicht ganz so hoch\"  \n- \"Sonderreinigung / Allergiker\"\n\n### 8.3 Canonical Override Priority\nOrder:\n1. Payment / Invoice / CC  \n2. Dog in room  \n3. Beds  \n4. Allergy bedding  \n5. Room location  \n6. Arrival  \n7. Dog amenities  \n\nCanonical priorities determine the order of evaluation, not exclusivity.\nIf multiple canonical meanings apply, create all matching canonical tasks, unless they express the same meaning.\n\n### 8.4 Canonical Meaning Integrity Rule\n\nCanonical titles represent **fixed, one-directional operational meanings** (e.g., \"add credit card\", \"quiet room requested\", \"dog in room\", \"extra bed\", etc.).\n\nTo preserve their semantic integrity:\n\n- **Never assign a canonical title if the guest comment expresses the opposite or negated meaning of that canonical action.**\n\n- If the guest comment **contradicts or reverses a previously-requested canonical meaning**,  \n  → **you must NOT pick the canonical title again**.\n\n- Backward/undo requests are allowed, but must be represented as:\n  - **an update** to the existing task (if one exists), or  \n  - **a new free-form non-canonical task**  \n  — **but not a canonical title**.\n\n- Canonical titles may only be used when the guest's intent **clearly matches** that canonical meaning and is not a reversal, cancellation, or negation.\n\n## Examples\n\n- \"Please remove my credit card\" →  \n  **Do NOT use the canonical title** \"CC hinzufügen\".  \n  Instead update the payment-related task to reflect CC removal.\n\n- \"We no longer need an extra bed\" →  \n  **Do NOT use** \"Zustellbett vorbereiten\".  \n  Modify/remove the existing extra-bed task accordingly.\n\n- \"The dog will NOT come\" →  \n  **Do NOT use** \"Hund im Zimmer\".  \n  Handle this as a deactivation/update, not a canonical task.\n\n- \"Cancel quiet room request\" →  \n  **Do NOT use** \"ruhiges Zimmer gewünscht\".\n\nBackward changes **are allowed**, but they must not trigger a canonical task title.\n\n## 9. Guest Comment Semantic Rules\n\n### 9.1 Room Location → FO\nInterpret any mention of:\n- quiet  \n- away from elevator  \n- away from street  \n- view direction  \n- courtyard side  \n- high/low floor  \n\n→ map to canonical FO titles.\n\n### 9.2 Question → FO Email Task\nIf comment contains:\n- \"?\"  \n- \"could you…?\"  \n- \"can you…?\"  \n- \"is it possible…?\"  \n\nCreate:\n**Title:** \"Reply to guest inquiry by email\"  \n**assigned_to:** Rezeptionist/in\n\n### 9.3 Rate / Payer / Abbreviation Detection\nIf comment indicates rate type or payer responsibility (BB, HB, FB, Corp, inkl., exkl., company pays…):\n\nCreate FO task:  \n**Title:** \"Send invoice to correct payer\"\n\n### 9.4 Do not correct rooms\nNever infer or correct room/unit assignment.\n\n## 10. DAYUSE LOGIC\n\nIf comment contains \"Dayuse\" with RO/SZ/ or booking code:\n\n### Task 1 — Housekeeping\n- **Title:** \"Dayuse room cleaning after 17:00\"  \n- **Description:** \"Prepare room for dayuse cleaning after guest departure at 17:00.\"  \n- **assigned_to:** Housekeeping  \n- **due:** arrival_date @ 17:00  \n\n### Task 2 — Front Office\n- **Title:** \"Dayuse booking: 10:00–17:00\"  \n- **Description:** \"Handle dayuse booking from 10:00 to 17:00.\"  \n- **assigned_to:** Rezeptionist/in  \n- **due:** arrival date (keep arrival time)\n\nThe presence of \"Dayuse\" alone is enough to treat the comment as a Dayuse request. If RO/SZ/ or a booking code are also present, treat it as confirmation.\nDayuse never suppresses or replaces occupancy-based logic. If the guest count exceeds room capacity, you must still create \"Zustellbett vorbereiten\" in addition to Dayuse tasks.\n\n## 11. Task Fields\n- title (< 90 chars)  \n- description (factual)  \n- assigned_to  \n- priority (true only if urgent/safety)  \n- due (use arrival when appropriate; skip if arrival missing)  \n- action (create/update)  \n- sweeply_trace_id (required when updating)\n\n## 12. Output Format\n- Strict JSON only  \n- Top-level array  \n- No markdown  \n- Must follow Sweeply schema\n- Never output control characters (Unicode code points < U+0020) in any string.\n- Never include \\u0000 (null) or binary-like sequences such as \\u0000f6 in text.\n- For German text, always output proper umlauts (ä, ö, ü, ß).\n- If you cannot represent a character safely, replace it with a close ASCII equivalent (e.g., ö -> oe).\n- You must always run the occupancy-based extra-bed rule, even if it conflicts with any other rule in this prompt.\n- Every title and description should be created in english except when it's a cannonical title. Only cannonical titles should be in German."
+        }
+      },
+      "id": "6cec533e-def0-4208-b673-15c800f95224",
+      "name": "Task agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        128,
+        400
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript) — Extract booking details\n// Reads upstream by selector API: $('Get booking details'), $('Get reservation')\n\n\n// Read sources\nlet booking = $('Get booking details').first().json;\n\nlet resCtx = null;\ntry {\n  resCtx = $(\"Get reservation\").first().json;\n} catch (e) {\n  // Save Content node wasn't executed (no successful scrapes)\n}\n\n// Normalize booking: some nodes may output [ { booking } ]\n\n// Determine reservationId: prefer fresh one from Get reservation; else first in booking.reservations\nconst reservations = Array.isArray(booking?.reservations) ? booking.reservations : [];\nconst fallbackReservationId = reservations[0]?.id || null;\nconsole.log(resCtx)\nconst reservationId = resCtx?.id || fallbackReservationId;\n\nif (!reservationId) {\n  return [{\n    json: {\n      error: 'Missing reservation id from \"Get reservation\", and no reservations[] in \"Get booking details\".'\n    }\n  }];\n}\n// Try to match inside booking payload\nconst r = reservations.find(x => x?.id === reservationId) || null;\n\nconst guestDetails = resCtx ? resCtx?.primaryGuest : booking?.booker;\n\n// Booking fields\nconst bookingId        = booking?.id || '';\nconst bookerFirstName  = guestDetails?.firstName || '';\nconst bookerLastName   = guestDetails?.lastName || '';\nconst bookerBirthday   = guestDetails?.birthDate || '';\nconst bookerComment    = typeof booking?.bookerComment === 'string' ? booking.bookerComment : '';\nconst extraBookingComment = typeof booking?.comment === 'string' ? booking.comment : '';\n\n// Reservation-level comments (prefer freshest from resCtx)\nconst reservationComment =\n  (typeof resCtx?.comment === 'string' ? resCtx.comment : '') ||\n  (typeof r?.comment === 'string' ? r.comment : '') || '';\n\nconst guestComment =\n  (typeof resCtx?.guestComment === 'string' ? resCtx.guestComment : '') ||\n  (typeof r?.guestComment === 'string' ? r.guestComment : '') || '';\n\n// Unit / UnitGroup / Property (prefer concrete unit from resCtx)\nconst unit      = resCtx?.unit      || r?.unit      || {};\nconst unitGroup = resCtx?.unitGroup || r?.unitGroup || {};\nconst property  = r?.property || resCtx?.property || {};\n\n// Other reservation details\nconst arrival      = r?.arrival      || resCtx?.arrival      || '';\nconst departure    = r?.departure    || resCtx?.departure    || '';\nconst adultsField  = (typeof (r?.adults ?? resCtx?.adults) === 'number') ? (r?.adults ?? resCtx?.adults) : null;\nconst channelCode  = r?.channelCode  || resCtx?.channelCode  || '';\nconst ratePlanCode = r?.ratePlan?.code || resCtx?.ratePlan?.code || '';\nconst childrenNumber = resCtx?.childrenAges?.length || 0;\n\nconst sourceComments = `\n  Booker Comment: ${bookerComment},\\n\n  Extra Booking Comment: ${extraBookingComment},\\n\n  Guest Comment: ${guestComment},\\n\n  Extra Reservation Comment: ${reservationComment}\n`\n\nif (fallbackReservationId && !resCtx?.id) {\n  return [{\n  json: {\n    // Identifiers\n    propertyId: property?.id || '',\n    propertyName: property?.name || '',\n    reservationId: '',\n    bookingId,\n\n    // Booker\n    bookerFirstName,\n    bookerLastName,\n    bookerBirthday,\n\n    // Comments\n    bookerComment,          // booking-level\n    reservationComment: '',     // reservation-level\n    guestComment: '',           // reservation-level\n    extraBookingComment,    // booking-level `comment`\n\n    // Unit details\n    unitId: '',\n    unitName: '',\n    unitDescription: '',\n    unitGroupIdFromUnit: '',\n\n    // Unit group (category)\n    unitGroupId:   '',\n    unitGroupCode: '',\n    unitGroupName: '',\n    unitGroupType: '',\n\n    // Extras\n    arrival: '',\n    departure: '',\n    adults: '',\n    childrenNumber: 0,\n    channelCode: '',\n    ratePlanCode: '',\n    \n    sourceComments\n  }\n  }]\n}\n\n// Single output\nreturn [{\n  json: {\n    // Identifiers\n    propertyId: property?.id || '',\n    propertyName: property?.name || '',\n    reservationId,\n    bookingId,\n\n    // Booker\n    bookerFirstName,\n    bookerLastName,\n    bookerBirthday,\n\n    // Comments\n    bookerComment,          // booking-level\n    reservationComment,     // reservation-level\n    guestComment,           // reservation-level\n    extraBookingComment,    // booking-level `comment`\n\n    // Unit details\n    unitId: unit?.id || '',\n    unitName: unit?.name || '',\n    unitDescription: unit?.description || '',\n    unitGroupIdFromUnit: unit?.unitGroupId || '',\n\n    // Unit group (category)\n    unitGroupId:   unitGroup?.id || '',\n    unitGroupCode: unitGroup?.code || '',\n    unitGroupName: unitGroup?.name || '',\n    unitGroupType: unitGroup?.type || '',\n\n    // Extras\n    arrival,\n    departure,\n    adults: adultsField,\n    childrenNumber,\n    channelCode,\n    ratePlanCode,\n\n    sourceComments\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        400
+      ],
+      "id": "09c93759-8c88-4a24-ac91-51a07846b36a",
+      "name": "Extract booking details"
+    },
+    {
+      "parameters": {
+        "group": "booking-v1",
+        "resource": "Reservation",
+        "operation": "BookingReservationsByIdGet",
+        "BookingReservationsByIdGet_id": "={{ $json.body.data.entityId }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "@apaleo/n8n-nodes-apaleo-official.apaleo",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        304
+      ],
+      "id": "27231a1f-13e1-45d9-9881-25e83f504dcc",
+      "name": "Get reservation",
+      "credentials": {
+        "apaleoOAuth2Api": {
+          "id": "YOUR_APALEO_CREDENTIAL_ID",
+          "name": "Apaleo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7554124f-bc82-442b-b7d4-ad7ea50af643",
+              "name": "webhook_entity_id",
+              "value": "={{ $json.body.data.entityId }}",
+              "type": "string"
+            },
+            {
+              "id": "636d19d7-6b3e-49e6-b395-2729e94c347c",
+              "name": "webhook_topic",
+              "value": "={{ $json.body.topic }}",
+              "type": "string"
+            },
+            {
+              "id": "cc955414-b1c3-4765-8755-7bb8df78f2e8",
+              "name": "apaleo_account_id",
+              "value": "={{ $json.body.accountId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        400
+      ],
+      "id": "6f547c54-f221-4e3f-95c4-4ca1973f9c2e",
+      "name": "Webhook details",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "tableId": "trace_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "apaleo_property_id",
+              "fieldValue": "={{ $('Get booking details').first().json.reservations[0].property.id }}"
+            },
+            {
+              "fieldId": "webhook_topic",
+              "fieldValue": "={{ $('Webhook details').item.json.webhook_topic }}"
+            },
+            {
+              "fieldId": "apaleo_account_id",
+              "fieldValue": "={{ $('Webhook details').item.json.apaleo_account_id }}"
+            },
+            {
+              "fieldId": "webhook_entity_id",
+              "fieldValue": "={{ $('Webhook details').item.json.webhook_entity_id }}"
+            },
+            {
+              "fieldId": "trace",
+              "fieldValue": "={{ $('Map booking details to tasks').item.json }}"
+            },
+            {
+              "fieldId": "booking_id",
+              "fieldValue": "={{ $('Map booking details to tasks').item.json.booking_id }}"
+            },
+            {
+              "fieldId": "source_comments",
+              "fieldValue": "={{ $('Extract booking details').item.json.sourceComments }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        208
+      ],
+      "id": "ffec0cfa-f0e5-456c-bf46-1105e1def4bc",
+      "name": "Create trace logs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n\n/**\n * Inputs expected:\n * - Node \"Extract booking details\": array of booking objects (usually length 1)\n * - Node \"Task agent\": array with objects like { output: { tasks: [ ... ] } }\n *\n * Output:\n * - One item per enriched task:\n *   {\n *     title, description, assigned_to, priority, due,\n *     reservation_id, booking_id, booker_first_name, booker_last_name,\n *     unit_id, unit_name, unit_description, unit_group_id_from_unit,\n *     unit_group_id, unit_group_code, unit_group_name, unit_group_type\n *   }\n */\n\n// 1) Pull inputs from other nodes\nconst bookings = $(\"Extract booking details\").first().json;\nconst agentItems = $(\"Task agent\").first().json.output;\n\n// 2) Normalize/flatten tasks from the agent\nconst tasks = agentItems || [];\nconsole.log(tasks)\nif (!tasks.length) {\n  return []; // no tasks to map\n}\n\n// Choose the first booking (typical flow is 1 booking -> many tasks).\n// If you need multi-booking support later, add matching logic here.\nconst b = bookings ?? {};\n\n// 3) Build enrichment payload in snake_case\nconst enrichment = {\n  reservation_id: b.reservationId ?? \"\",\n  booking_id: b.bookingId ?? \"\",\n  booker_first_name: b.bookerFirstName ?? \"\",\n  booker_last_name: b.bookerLastName ?? \"\",\n  unit_id: b.unitId ?? \"\",\n  unit_name: b.unitName ?? \"\",\n  unit_description: b.unitDescription ?? \"\",\n  unit_group_id_from_unit: b.unitGroupIdFromUnit ?? \"\",\n  unit_group_id: b.unitGroupId ?? \"\",\n  unit_group_code: b.unitGroupCode ?? \"\",\n  unit_group_name: b.unitGroupName ?? \"\",\n  unit_group_type: b.unitGroupType ?? \"\",\n  property_id: b.propertyId ?? \"\",\n  property_name: b.propertyName ?? \"\"\n};\n\n// 4) Emit one item per enriched task, preserving snake_case for task fields\nconst output = tasks.map(t => {\n  // t is expected to already use snake_case keys: title, description, assigned_to, priority, due\n  return {\n      ...t,\n      ...enrichment,\n    };\n});\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        400
+      ],
+      "id": "2f148ce9-ebba-412d-a2a5-71b68bc9c55f",
+      "name": "Map booking details to tasks"
+    },
+    {
+      "parameters": {
+        "jsCode": "let webhook = null;\n\ntry {\n  webhook = $(\"Receive reservation\").first().json;\n} catch (e) {\n  // Save Content node wasn't executed (no successful scrapes)\n}\n\ntry {\n  webhook = $(\"Receive booking changes\").first().json\n} catch (e) {\n  \n}\n\nreturn webhook"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        400
+      ],
+      "id": "ffb0d25d-ddf3-4fbb-b0b6-cffe9a7cff29",
+      "name": "Source webhook",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Get many rows for a given booking_id. The output from this tool will be used to define if there are already similar tasks for a specific booking or reservation.",
+        "operation": "getAll",
+        "tableId": "trace_logs",
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "booking_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get booking details').first().json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        192,
+        624
+      ],
+      "id": "ab220947-0a74-496d-851e-09fe3be976b1",
+      "name": "Get trace logs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Responsible tool to get the trace logs for a specific booking so we assure there are no duplicated tasks created",
+        "height": 192,
+        "width": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        112,
+        576
+      ],
+      "typeVersion": 1,
+      "id": "4d61fa5b-5039-483d-995e-b4e34fba8fa0",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.getsweeply.dev/integrations/task",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "={{ $('Sweeply Basic Auth Token').item.json.authorization }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.trace.title }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.trace.description }}"
+            },
+            {
+              "name": "accountId",
+              "value": "={{ $json.apaleo_account_id }}"
+            },
+            {
+              "name": "reservationId",
+              "value": "={{ $json.trace.reservation_id }}"
+            },
+            {
+              "name": "propName",
+              "value": "={{ $json.trace.property_name }}"
+            },
+            {
+              "name": "propId",
+              "value": "={{ $json.trace.property_id }}"
+            },
+            {
+              "name": "priority",
+              "value": "={{ $json.trace.priority }}"
+            },
+            {
+              "name": "categories",
+              "value": "={{ $json.trace.assigned_to }}"
+            },
+            {
+              "name": "startDate",
+              "value": "={{ $json.trace.due }}"
+            },
+            {
+              "name": "type",
+              "value": "trace"
+            },
+            {
+              "name": "bookingId",
+              "value": "={{ $json.trace.booking_id }}"
+            },
+            {
+              "name": "unitId",
+              "value": "={{ $json.trace.unit_name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1856,
+        208
+      ],
+      "id": "1fa32ac0-a0e9-40db-8ff1-6230bef7ccdb",
+      "name": "Post to Sweeply",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "trace_logs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create trace logs').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sweeply_status",
+              "fieldValue": "success"
+            },
+            {
+              "fieldId": "sweeply_trace_id",
+              "fieldValue": "={{ $('Post to Sweeply').item.json.traceId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        112
+      ],
+      "id": "dac2dd10-b5fc-4a2f-8c36-0f262cf8b362",
+      "name": "Update trace success",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "trace_logs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create trace logs').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sweeply_status",
+              "fieldValue": "failed"
+            },
+            {
+              "fieldId": "notes",
+              "fieldValue": "={{ $json.error }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        304
+      ],
+      "id": "5432df9e-0d3d-4078-a17c-1577a4b388ba",
+      "name": "Update trace Failed",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c54f8f69-523f-415e-9f9d-9ce352853bbc",
+              "leftValue": "={{ $('Map booking details to tasks').item.json.action }}",
+              "rightValue": "create",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        400
+      ],
+      "id": "ce408694-3c8d-409a-b96a-ac8138004138",
+      "name": "If is create"
+    },
+    {
+      "parameters": {
+        "tableId": "trace_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "apaleo_property_id",
+              "fieldValue": "={{ $('Get booking details').first().json.reservations[0].property.id }}"
+            },
+            {
+              "fieldId": "webhook_topic",
+              "fieldValue": "={{ $('Webhook details').item.json.webhook_topic }}"
+            },
+            {
+              "fieldId": "apaleo_account_id",
+              "fieldValue": "={{ $('Webhook details').item.json.apaleo_account_id }}"
+            },
+            {
+              "fieldId": "webhook_entity_id",
+              "fieldValue": "={{ $('Webhook details').item.json.webhook_entity_id }}"
+            },
+            {
+              "fieldId": "trace",
+              "fieldValue": "={{ $('Map booking details to tasks').item.json }}"
+            },
+            {
+              "fieldId": "booking_id",
+              "fieldValue": "={{ $('Map booking details to tasks').item.json.booking_id }}"
+            },
+            {
+              "fieldId": "source_comments",
+              "fieldValue": "={{ $('Extract booking details').item.json.sourceComments }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        592
+      ],
+      "id": "357b7151-15e6-4445-a5bd-831eb2dc1809",
+      "name": "Create trace logs - update",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://app.getsweeply.dev/integrations/task/{{ $json.trace.sweeply_trace_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "authorization",
+              "value": "={{ $('Sweeply Basic Auth Token').item.json.authorization }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.trace.title }}"
+            },
+            {
+              "name": "accountId",
+              "value": "={{ $json.apaleo_account_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1856,
+        592
+      ],
+      "id": "77b8ca87-3532-44e9-8da7-9abb71b16201",
+      "name": "Update to Sweeply",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "trace_logs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create trace logs - update').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sweeply_status",
+              "fieldValue": "updated"
+            },
+            {
+              "fieldId": "sweeply_trace_id",
+              "fieldValue": "={{ $json.traceId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        496
+      ],
+      "id": "6968a71c-ec2f-4c6f-8bdd-cc80763b7454",
+      "name": "Update trace \"updated\"",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "trace_logs",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create trace logs - update').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sweeply_status",
+              "fieldValue": "failed"
+            },
+            {
+              "fieldId": "notes",
+              "fieldValue": "={{ $json.error }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        688
+      ],
+      "id": "c2a88d0e-b846-4e70-90f0-4f2dae933b63",
+      "name": "Update trace Failed update",
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dc27e0b3-d199-4c8b-bd5d-3d195308ff0c",
+              "name": "authorization",
+              "value": "=Basic {{ \"username:password\".base64Encode() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        400
+      ],
+      "id": "3da01999-751a-4f7f-ba24-c68f2e68f752",
+      "name": "Sweeply Basic Auth Token"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive reservation": {
+      "main": [
+        [
+          {
+            "node": "Get reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get booking details": {
+      "main": [
+        [
+          {
+            "node": "Extract booking details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Task agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Task agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive booking changes": {
+      "main": [
+        [
+          {
+            "node": "Map Booking Id / Account Id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Booking Id / Account Id": {
+      "main": [
+        [
+          {
+            "node": "Get booking details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Task agent": {
+      "main": [
+        [
+          {
+            "node": "Source webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract booking details": {
+      "main": [
+        [
+          {
+            "node": "Task agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get reservation": {
+      "main": [
+        [
+          {
+            "node": "Get booking details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook details": {
+      "main": [
+        [
+          {
+            "node": "Map booking details to tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create trace logs": {
+      "main": [
+        [
+          {
+            "node": "Post to Sweeply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map booking details to tasks": {
+      "main": [
+        [
+          {
+            "node": "Sweeply Basic Auth Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source webhook": {
+      "main": [
+        [
+          {
+            "node": "Webhook details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get trace logs": {
+      "ai_tool": [
+        [
+          {
+            "node": "Task agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Sweeply": {
+      "main": [
+        [
+          {
+            "node": "Update trace success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update trace Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If is create": {
+      "main": [
+        [
+          {
+            "node": "Create trace logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create trace logs - update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create trace logs - update": {
+      "main": [
+        [
+          {
+            "node": "Update to Sweeply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update to Sweeply": {
+      "main": [
+        [
+          {
+            "node": "Update trace \"updated\"",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update trace Failed update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweeply Basic Auth Token": {
+      "main": [
+        [
+          {
+            "node": "If is create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "31b5f028-d16d-4909-a767-fe9b19f617c9",
+  "meta": {
+    "templateId": "self-building-ai-agent",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
