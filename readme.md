@@ -188,6 +188,8 @@ The system integrates with Sweeply for task management. You need to configure Ba
 
 **Note:** The workflow currently uses the Sweeply development API endpoint (`https://app.getsweeply.dev`). The production URL is not yet available. Update the API URLs in the **Post to Sweeply** and **Update to Sweeply** nodes when the production endpoint becomes available.
 
+The workflow sends a `pms: "apaleo"` parameter with each request to identify the source PMS system.
+
 ### 5. Daily Email Report Configuration
 
 The **Daily Traces Email** workflow sends a daily summary report at 23:59 containing all traces generated during the day.
@@ -328,7 +330,15 @@ Both paths converge at the data processing stage and follow the same AI task gen
   - Unit group: `unitGroupId`, `unitGroupCode`, `unitGroupName`, `unitGroupType`
   - Dates: `arrival`, `departure`
   - Other: `adults`, `channelCode`, `ratePlanCode`
-- **Next Step**: Triggers "Task agent"
+- **Next Step**: Triggers "If is the valid property"
+
+##### If is the valid property
+- **Node**: `If is the valid property`
+- **Purpose**: Filters incoming data to only process bookings from a specific property
+- **Logic**: Compares the `propertyId` from extracted booking details against the configured `PROPERTY_ID`
+- **Configuration**: Replace `PROPERTY_ID` placeholder with your actual Apaleo property ID
+- **Output**: Only passes through data matching the configured property
+- **Next Step**: Triggers "Task agent" (on true branch)
 
 #### Phase 4: AI Task Generation
 
@@ -350,18 +360,20 @@ Both paths converge at the data processing stage and follow the same AI task gen
      - Sets due dates for time-sensitive tasks
      - Checks for extra bed requirements based on room type and number of adults
   5. Generates structured JSON output matching the defined schema
-- **Role Assignment Rules**:
-  - **Property Admin**: Maintenance, equipment, infrastructure, property-wide operations
-  - **Reservation Manager**: Bookings, cancellations, changes, rate issues, payments, invoices
-  - **Rezeptionist/in**: Guest communications, check-in/out notes, key handover, generic front-desk actions
-  - **Senior Rezeptionist/in**: Escalations, VIP/edge cases, unresolved issues
-  - **Housekeeping**: Cleaning, room prep, amenities (towels, linens, pillows), turn-down service
+- **Department Assignment Rules** (using `Departments` array):
+  - **property-admin**: Maintenance, equipment, infrastructure, property-wide operations, broken items
+  - **reservation-manager**: Bookings, cancellations, changes, rate issues, payments, invoices
+  - **front-office**: Guest communications, check-in/out notes, arrival times, quiet room requests, high floor requests, adjacent rooms, CC changes, dog amenities
+  - **senior-front-office**: Escalations, VIP/edge cases, complaints, unresolved issues
+  - **housekeeping**: Cleaning, room prep, amenities (towels, linens, pillows), extra beds, baby beds, pet in room
 - **Output**: JSON object with `tasks` array, where each task contains:
   - `title`: Action-oriented task summary
   - `description`: Optional detailed description
-  - `assigned_to`: Role/department responsible
-  - `priority`: "low", "normal", or "high"
-  - `due`: ISO 8601 datetime (if applicable)
+  - `assigned_to`: Object with `Departments` array (e.g., `{"Departments": ["housekeeping", "front-office"]}`)
+  - `priority`: Boolean (`true` for high priority, `false` for normal)
+  - `due`: ISO 8601 datetime (required when arrival date exists)
+  - `action`: `"create"` or `"update"` (for trace management)
+  - `sweeply_trace_id`: Required when action is `"update"`
 - **Next Step**: Triggers "Map booking details to tasks"
 
 ##### Get Trace Logs (Tool)
@@ -470,6 +482,7 @@ After importing the workflows into n8n, you need to configure the following valu
 | `EMAIL_ADDRESS` | Daily Traces Email.json | Account details node | Recipient email address(es) for daily reports |
 | `YOUR_RESERVATION_WEBHOOK_PATH` | Traces Agent.json | Receive reservation webhook node | Custom webhook path (e.g., `apaleo/reservations`) |
 | `YOUR_BOOKING_WEBHOOK_PATH` | Traces Agent.json | Receive booking changes webhook node | Custom webhook path (e.g., `apaleo/bookings`) |
+| `PROPERTY_ID` | Traces Agent.json | If is the valid property node | Your Apaleo property ID to filter incoming webhooks |
 
 **Important Notes:**
 - **Credential IDs** (`YOUR_APALEO_CREDENTIAL_ID`, `YOUR_OPENAI_CREDENTIAL_ID`, etc.) will be automatically set when you connect credentials through n8n's credential selector in each node
