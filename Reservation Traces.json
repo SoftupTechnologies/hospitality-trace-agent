@@ -1,0 +1,513 @@
+{
+  "name": "Reservation Traces - PROD",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "REDACTED",
+          "mode": "list",
+          "cachedResultName": "Apaleo AI Agents — Manage lock - create and wait"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "body_data_entityId": "={{ $json.body.data.entityId }}",
+            "body_topic": "={{ $json.body.topic }}",
+            "body_accountId": "={{ $json.body.accountId }}",
+            "body_propertyId": "={{ $json.body.propertyId }}"
+          },
+          "matchingColumns": [
+            "body_data_entityId",
+            "body_topic",
+            "body_accountId",
+            "body_propertyId"
+          ],
+          "schema": [
+            {
+              "id": "body_data_entityId",
+              "displayName": "body_data_entityId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "body_topic",
+              "displayName": "body_topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "body_accountId",
+              "displayName": "body_accountId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "body_propertyId",
+              "displayName": "body_propertyId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -1328,
+        128
+      ],
+      "name": "Call Manage lock - create and wait",
+      "id": "d48c4655-0b01-4045-83ae-086d004e56a9",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "REDACTED",
+          "mode": "list",
+          "cachedResultName": "Apaleo AI Agents — Sub - Trace Ai Agent"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "payload": "={{ $json }}",
+            "webhook_details": "={{ $('Call Manage lock - create and wait').item.json }}"
+          },
+          "matchingColumns": [
+            "primaryGuestFirstName",
+            "primaryGuestBirthday",
+            "primaryGuestLastName",
+            "extraBookingComment",
+            "reservationComment",
+            "bookerFirstName",
+            "bookerLastName",
+            "reservationId",
+            "unitGroupCode",
+            "unitGroupName",
+            "bookerComment",
+            "propertyName",
+            "ratePlanCode",
+            "childrenAges",
+            "guestComment",
+            "unitGroupId",
+            "channelCode",
+            "propertyId",
+            "ratePlanId",
+            "bookingId",
+            "departure",
+            "unitName",
+            "context",
+            "arrival",
+            "unitId",
+            "adults",
+            "now",
+            "reservations_firstItem",
+            "sourceComments",
+            "_firstItem",
+            "id_firstItem"
+          ],
+          "schema": [
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "webhook_details",
+              "displayName": "webhook_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        -144
+      ],
+      "name": "Call Sub - Trace Ai Agent",
+      "id": "28a8a379-3b0f-4345-b8b0-6c36ad50d29f",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "group": "booking-v1",
+        "resource": "Reservation",
+        "operation": "BookingReservationsByIdGet",
+        "BookingReservationsByIdGet_id": "={{ $json.webhook_entity_id }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "@apaleo/n8n-nodes-apaleo-official.apaleo",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        128
+      ],
+      "id": "a9874494-5341-40dd-8d4a-806d51bb9f66",
+      "name": "Get reservation",
+      "retryOnFail": true,
+      "credentials": {
+        "apaleoOAuth2Api": {
+          "id": "REDACTED",
+          "name": "REDACTED"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "group": "booking-v1",
+        "resource": "Booking",
+        "operation": "BookingBookingsByIdGet",
+        "BookingBookingsByIdGet_id": "={{ $json.bookingId }}",
+        "additionalFields": {
+          "expand": "reservations"
+        },
+        "requestOptions": {}
+      },
+      "type": "@apaleo/n8n-nodes-apaleo-official.apaleo",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        48
+      ],
+      "id": "52480934-89fd-45bc-a08a-6d4744e52efa",
+      "name": "Get booking details",
+      "retryOnFail": true,
+      "credentials": {
+        "apaleoOAuth2Api": {
+          "id": "REDACTED",
+          "name": "REDACTED"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n// Purpose: Extract booking + (optional) reservation details\n// resCtx is the ONLY reservation source. No fallbacks.\n\n// --------------------\n// Read upstream sources\n// --------------------\nconst booking = $('Get booking details').first().json;\n\nconst resCtx = $('Get reservation').first().json;\n\nconst context = 'reservation';\nconst now = new Date().toISOString();\n\nfunction isDateBetweenUTC(date, startDate, endDate) {\n  const toUTCDateOnly = (d) => {\n    const x = new Date(d);\n    return Date.UTC(\n      x.getUTCFullYear(),\n      x.getUTCMonth(),\n      x.getUTCDate()\n    );\n  };\n\n  const target = toUTCDateOnly(date);\n  const start  = toUTCDateOnly(startDate);\n  const end    = toUTCDateOnly(endDate);\n\n  return target >= start && target <= end;\n}\n\n// --------------------\n// Booker & Guest\n// --------------------\nconst booker = booking?.booker || {};\nconst primaryGuest = resCtx?.primaryGuest || {};\n\n// --------------------\n// Identifiers\n// --------------------\nconst bookingId = booking?.id || null;\nconst reservationId = resCtx?.id || null;\n\n// --------------------\n// Booker fields\n// --------------------\nconst bookerFirstName = booker?.firstName || null;\nconst bookerLastName  = booker?.lastName || null;\n\nconst primaryGuestFirstName = primaryGuest?.firstName || null;\nconst primaryGuestLastName  = primaryGuest?.lastName || null;\nconst primaryGuestBirthday  = primaryGuest?.birthDate || null;\n\n// --------------------\n// Comments\n// --------------------\nconst bookerComment = null;\nconst extraBookingComment = null;\n\n// TODO: Temp disable\nconst reservationComment = null;\n  // typeof resCtx?.comment === 'string'\n  //   ? resCtx.comment\n  //   : null;\n\nconst guestComment =\n  typeof resCtx?.guestComment === 'string'\n    ? resCtx.guestComment\n    : null;\n\n// --------------------\n// Unit / Unit Group / Property\n// --------------------\nconst unit = resCtx?.unit || {};\nconst unitGroup = resCtx?.unitGroup || {};\nconst property =\n  resCtx?.property\n  || booking?.reservations?.[0]?.property\n  || {};\n\n// --------------------\n// Reservation details\n// --------------------\nconst arrival = resCtx?.arrival || null;\nconst departure = resCtx?.departure || null;\n\nconst isUserBirthday = primaryGuestBirthday && arrival && departure ? isDateBetweenUTC(primaryGuestBirthday, arrival, departure) : false\n\nconst adults =\n  typeof resCtx?.adults === 'number'\n    ? resCtx.adults\n    : null;\n\nconst childrenAges = Array.isArray(resCtx?.childrenAges)\n  ? resCtx.childrenAges\n  : [];\n\nconst channelCode = resCtx?.channelCode || null;\nconst ratePlanCode = resCtx?.ratePlan?.code || null;\nconst ratePlanName = resCtx?.ratePlan?.name || null;\nconst ratePlanId = resCtx?.ratePlan?.id || null;\n\n// --------------------\n// Debug / trace context\n// --------------------\nconst sourceComments = `\nGuest Comment: ${guestComment}\nReservation Comment: ${reservationComment}\n`.trim();\n\n// --------------------\n// Final output (single item)\n// --------------------\nreturn [\n  {\n    json: {\n      context,\n      now,\n      // Identifiers\n      propertyId: property?.id || null,\n      propertyName: property?.name || null,\n      bookingId,\n      reservationId,\n\n      // Booker\n      bookerFirstName,\n      bookerLastName,\n      primaryGuestFirstName,\n      primaryGuestLastName,\n      primaryGuestBirthday,\n      isUserBirthday,\n\n      // Comments\n      bookerComment,\n      extraBookingComment,\n      reservationComment,\n      guestComment,\n\n      // Unit\n      unitId: unit?.id || null,\n      unitName: unit?.name || null,\n      unitDescription: unit?.description || null,\n      unitGroupIdFromUnit: unit?.unitGroupId || null,\n\n      // Unit group\n      unitGroupId: unitGroup?.id || null,\n      unitGroupCode: unitGroup?.code || null,\n      unitGroupName: unitGroup?.name || null,\n      unitGroupType: unitGroup?.type || null,\n\n      // Stay details\n      arrival,\n      departure,\n      adults,\n      childrenAges,\n      channelCode,\n      ratePlanCode,\n      ratePlanName,\n      ratePlanId,\n\n      // Trace/debug\n      sourceComments,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -32
+      ],
+      "id": "4bb0b2d7-e9df-4bc9-b24a-75f3c04c9faf",
+      "name": "Extract booking details"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "REDACTED",
+          "mode": "list",
+          "cachedResultName": "Apaleo AI Agents — Release lock"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "webhook_event_key": "={{ $('Call Manage lock - create and wait').item.json.webhook_event_key }}"
+          },
+          "matchingColumns": [
+            "webhook_event_key"
+          ],
+          "schema": [
+            {
+              "id": "webhook_event_key",
+              "displayName": "webhook_event_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        144
+      ],
+      "name": "Release lock",
+      "id": "1af53076-4710-4c56-9392-d876e74d5596"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e70a5ea5-1e1a-412d-a251-ed18132a6e72",
+              "leftValue": "={{ $json.propertyId }}",
+              "rightValue": "PROPERTY_ID",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -432,
+        -32
+      ],
+      "id": "b4441b93-2275-40dd-a679-aabc9946d834",
+      "name": "If is the valid property"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "REDACTED",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1552,
+        128
+      ],
+      "id": "b659b562-3145-4d56-a99c-2afd1a6b2ae1",
+      "name": "Receive reservation",
+      "webhookId": "REDACTED"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7050f372-77d0-4e4a-80bf-76f196932e4a",
+              "leftValue": "={{ $json.guestComment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "4f3397e8-93d4-48b2-8aa3-5f6fd369c5e8",
+              "leftValue": "={{ $json.isUserBirthday }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b94acc2e-e0f1-4537-bd97-b54f3fdc8f5d",
+              "leftValue": "={{ $json.adults }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            },
+            {
+              "id": "fd3bf517-3ce9-4776-9a43-ea97951d5455",
+              "leftValue": "={{ $json.childrenAges }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "f84ee3ba-7fd5-42c4-bc50-58e25507cff5",
+              "leftValue": "={{ $json.ratePlanCode }}",
+              "rightValue": "DAYUSE",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        -96
+      ],
+      "id": "48756306-deb4-4094-8057-d47ccf309a45",
+      "name": "If Agent params do not exist"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Call Manage lock - create and wait": {
+      "main": [
+        [
+          {
+            "node": "Get reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get reservation": {
+      "main": [
+        [
+          {
+            "node": "Get booking details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Release lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get booking details": {
+      "main": [
+        [
+          {
+            "node": "Extract booking details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Release lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract booking details": {
+      "main": [
+        [
+          {
+            "node": "If is the valid property",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If is the valid property": {
+      "main": [
+        [
+          {
+            "node": "If Agent params do not exist",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Release lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive reservation": {
+      "main": [
+        [
+          {
+            "node": "Call Manage lock - create and wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Agent params do not exist": {
+      "main": [
+        [
+          {
+            "node": "Release lock",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Sub - Trace Ai Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "REDACTED",
+  "meta": {
+    "instanceId": "REDACTED"
+  },
+  "id": "REDACTED",
+  "tags": []
+}

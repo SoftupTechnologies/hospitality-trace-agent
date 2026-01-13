@@ -1,0 +1,322 @@
+{
+  "name": "Manage lock - create and wait",
+  "nodes": [
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2128,
+        3296
+      ],
+      "id": "4bb0a52b-b8bb-4ee3-906b-bed340cfb6fc",
+      "name": "Wait",
+      "webhookId": "REDACTED"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "webhook_event_queue",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_identifier",
+              "keyValue": "={{ $json.webhook_event_key }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2656,
+        3120
+      ],
+      "id": "e90ed978-fe49-4662-845d-0483735169c2",
+      "name": "Get webhook event",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "REDACTED"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "97f6e4b9-8d02-47b5-a6bc-714fc39d4575",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2416,
+        3120
+      ],
+      "id": "19d41f9a-9704-4df8-8ca2-dac68c77c7a2",
+      "name": "If no locks"
+    },
+    {
+      "parameters": {
+        "tableId": "webhook_event_queue",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "event_identifier",
+              "fieldValue": "={{ $('Webhook details').item.json.webhook_event_key}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2128,
+        3104
+      ],
+      "id": "3a8d4576-68a1-448a-89b4-243fc927dc22",
+      "name": "Create webhook lock",
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "REDACTED"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "body_data_entityId",
+              "type": "any"
+            },
+            {
+              "name": "body_topic",
+              "type": "any"
+            },
+            {
+              "name": "body_accountId",
+              "type": "any"
+            },
+            {
+              "name": "body_propertyId",
+              "type": "any"
+            }
+          ]
+        }
+      },
+      "id": "80302c44-1962-4fa6-8f34-93cf09a82528",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -3088,
+        3120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7554124f-bc82-442b-b7d4-ad7ea50af643",
+              "name": "webhook_entity_id",
+              "value": "={{ $('Start').item.json.body_data_entityId }}",
+              "type": "string"
+            },
+            {
+              "id": "636d19d7-6b3e-49e6-b395-2729e94c347c",
+              "name": "webhook_topic",
+              "value": "={{ $('Start').item.json.body_topic }}",
+              "type": "string"
+            },
+            {
+              "id": "cc955414-b1c3-4765-8755-7bb8df78f2e8",
+              "name": "apaleo_account_id",
+              "value": "={{ $('Start').item.json.body_accountId }}",
+              "type": "string"
+            },
+            {
+              "id": "74a2a4ff-6201-4a61-9c33-e6ebc2d97a6e",
+              "name": "webhook_event_key",
+              "value": "={{ $('Start').item.json.body_topic }}:{{ $('Start').item.json.body_propertyId }}:{{ $('Start').item.json.body_data_entityId }}",
+              "type": "string"
+            },
+            {
+              "id": "a2339ff6-69af-413d-ad8f-0ac4c7db1c68",
+              "name": "apaleo_property_id",
+              "value": "={{ $('Start').item.json.body_propertyId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2848,
+        3120
+      ],
+      "id": "fe59ed25-3eaa-4b09-afb0-dbd0741a09c9",
+      "name": "Webhook details",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8cbe03cd-65fa-436c-922b-80c57fbebaa4",
+              "name": "webhook_entity_id",
+              "value": "={{ $('Webhook details').item.json.webhook_entity_id }}",
+              "type": "string"
+            },
+            {
+              "id": "fbf37791-0450-4a89-bb80-d4bd12953b30",
+              "name": "webhook_event_key",
+              "value": "={{ $('Webhook details').item.json.webhook_event_key }}",
+              "type": "string"
+            },
+            {
+              "id": "3f30b1b3-7fd5-44b5-a579-2b5fb17926be",
+              "name": "apaleo_account_id",
+              "value": "={{ $('Webhook details').item.json.apaleo_account_id }}",
+              "type": "string"
+            },
+            {
+              "id": "82c88b33-7d81-41df-9d0d-93a36c2871f7",
+              "name": "webhook_topic",
+              "value": "={{ $('Webhook details').item.json.webhook_topic }}",
+              "type": "string"
+            },
+            {
+              "id": "1544aaae-7b30-4cb8-a587-3dca893f994f",
+              "name": "apaleo_property_id",
+              "value": "={{ $('Webhook details').item.json.apaleo_property_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1920,
+        3104
+      ],
+      "id": "ae59f355-7bf8-4728-81f7-86ac1342b824",
+      "name": "Output"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get webhook event": {
+      "main": [
+        [
+          {
+            "node": "If no locks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create webhook lock": {
+      "main": [
+        [
+          {
+            "node": "Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Webhook details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If no locks": {
+      "main": [
+        [
+          {
+            "node": "Create webhook lock",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Webhook details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook details": {
+      "main": [
+        [
+          {
+            "node": "Get webhook event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "REDACTED",
+  "meta": {
+    "instanceId": "REDACTED"
+  },
+  "id": "REDACTED",
+  "tags": []
+}

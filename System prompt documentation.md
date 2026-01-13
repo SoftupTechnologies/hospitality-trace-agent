@@ -21,10 +21,10 @@ And additional booking/reservation context:
 - **Room Type / Unit Group Name**  
 - **Arrival Date/Time**, **Departure Date/Time**  
 - **Channel** (booking source)  
-- **Rate Plan**  
-- **Number of Adults**  
+- **Rate Plan** (`ratePlanCode`, `ratePlanName`, `ratePlanId`)  
+- **Number of Adults** (`adults`)  
 - **Number of Children** (via `childrenAges` array)  
-- **Booker Birthday**
+- **Primary Guest Birthday** (`primaryGuestBirthday`)
 
 ### Deduplication  
 If **Booker Comment** and **Guest Comment** contain the same text on initial booking creation, they are treated as **one comment** to avoid duplicate tasks.
@@ -36,21 +36,19 @@ If **Booker Comment** and **Guest Comment** contain the same text on initial boo
 
 ## 2. Who Receives Tasks
 
-Tasks are assigned using a `Departments` array structure:
+Tasks are assigned using a `Department` array structure:
 
 ```json
 "assigned_to": {
-  "Departments": ["housekeeping", "front-office"]
+  "Department": ["Housekeeping", "Reception"]
 }
 ```
 
 ### Valid Department Tags
 
-- **property-admin** — Maintenance, equipment, infrastructure, broken items ("kaputt", "defekt")
-- **reservation-manager** — Bookings, rate corrections, payer responsibilities, billing structures
-- **front-office** — Guest communications, check-in/out, arrival notes, room preferences, CC changes, dog amenities
-- **senior-front-office** — VIP guests, complaints, escalations
-- **housekeeping** — Cleaning, room prep, towels, pillows, beds, pet in room
+- **Reception** — Guest communications, check-in/out, arrival notes, room preferences, dog amenities, parking, breakfast requests
+- **Housekeeping** — Cleaning, room prep, towels, pillows, beds, pet in room
+- **Technik** — Broken items, "kaputt", "defekt", technical issues
 
 ### Multi-Department Assignment
 
@@ -58,7 +56,7 @@ Some tasks require coordination between departments. When a task involves respon
 
 ```json
 "assigned_to": {
-  "Departments": ["housekeeping", "front-office"]
+  "Department": ["Housekeeping", "Reception"]
 }
 ```
 
@@ -68,13 +66,13 @@ The following tasks always use specific department combinations:
 
 | Task Type | Departments |
 |-----------|-------------|
-| Extra bed ("Zustellbett vorbereiten") | `["housekeeping", "front-office"]` |
-| Baby bed ("Babybett vorbereiten") | `["housekeeping", "front-office"]` |
-| Room adjacency ("Zimmer nebeneinander") | `["front-office"]` |
-| Early check-in | `["housekeeping", "front-office"]` |
-| Late checkout | `["housekeeping", "front-office"]` |
-| Parking request | `["front-office"]` |
-| Booking extension | `["housekeeping", "front-office"]` |
+| Extra bed ("Zustellbett vorbereiten") | `["Housekeeping", "Reception"]` |
+| Baby bed ("Babybett vorbereiten") | `["Housekeeping", "Reception"]` |
+| Room adjacency ("Zimmer nebeneinander") | `["Reception"]` |
+| Early check-in | `["Housekeeping", "Reception"]` |
+| Late checkout | `["Housekeeping", "Reception"]` |
+| Parking request | `["Reception"]` |
+| Booking extension | `["Housekeeping", "Reception"]` |
 
 ---
 
@@ -86,9 +84,11 @@ The following tasks always use specific department combinations:
 
 ---
 
-### 3.1 Payment, Credit Card & Invoices (Front Office)
+### 3.1 Payment, Credit Card & Invoices — DISABLED
 
-**Typical comments:**
+> ⚠️ **These are disabled trace domains.** No tasks are created for these intents.
+
+**Typical comments (NO task created):**
 
 - "Please charge my credit card"  
 - "VKK belasten", "KK belasten"  
@@ -96,18 +96,11 @@ The following tasks always use specific department combinations:
 - "Add my credit card"  
 - "Is payment received?"
 
-**Canonical tasks:**
-
-- **„KK / VKK belasten"**  
-- **„Zahlung prüfen / erfolgt?"**  
-- **„Rechnung versenden an: (email)"**  
-- **„CC hinzufügen"**
-
-**Departments:** `["front-office"]`
+**Result:** No task output — these are hard-skipped by the system prompt.
 
 ---
 
-### 3.2 Room Location & Allocation (Front Office)
+### 3.2 Room Location & Allocation (Reception)
 
 **Typical comments:**
 
@@ -123,21 +116,32 @@ The following tasks always use specific department combinations:
 - **„Zimmer nebeneinander"**  
 - **„schöne Aussicht gewünscht"**
 
-**Departments:** `["front-office"]`
+**Departments:** `["Reception"]`
 
 ---
 
 ### 3.3 Beds & Occupancy Logic
 
-Uses: **Adults**, **childrenAges**, **Room Type (unitGroupName)**
+Uses: **adults**, **childrenAges**
 
-**Automatic extra bed logic:**  
-If effective_guest_count > capacity → create:
+#### Automatic Extra Bed Logic
 
-- **„Zustellbett vorbereiten"**  
-  **Departments:** `["housekeeping", "front-office"]`
+Create **„Zustellbett vorbereiten"** when either condition matches:
+- `adults >= 3`
+- `adults >= 2` AND there exists a child age `> 2` in `childrenAges`
 
-**Note:** Babies (age ≤ 2) do not count toward room capacity. Only adults and children over age 2 are counted for extra-bed calculations (`effective_guest_count`).
+**Departments:** `["Housekeeping", "Reception"]`
+
+#### Automatic Baby Bed Logic
+
+Create **„Babybett vorbereiten"** when:
+- `adults >= 1` AND there exists a child age `<= 2` in `childrenAges`
+
+**Departments:** `["Housekeeping", "Reception"]`
+
+**Note:** If both conditions match, create **both** tasks (they represent different operational actions).
+
+#### Comment-Driven Bed Tasks
 
 **Typical comments:**
 
@@ -148,11 +152,9 @@ If effective_guest_count > capacity → create:
 
 **Canonical tasks:**
 
-- **„Zustellbett vorbereiten"** — `["housekeeping", "front-office"]`
-- **„Aufbettung für Kind"** — `["housekeeping", "front-office"]`
-- **„Babybett vorbereiten"** — `["housekeeping", "front-office"]`
-- **„Bettentyp vorbereiten (Twin / King)"** — `["housekeeping"]`
-- **„Betten zusammenstellen / trennen"** — `["housekeeping"]`
+- **„Zustellbett vorbereiten"** — `["Housekeeping", "Reception"]`
+- **„Babybett vorbereiten"** — `["Housekeeping", "Reception"]`
+- **„Gast kontaktieren: Twin Bed nicht verfügbar"** — `["Reception"]` (twin beds are not supported)
 
 ---
 
@@ -170,7 +172,7 @@ If effective_guest_count > capacity → create:
 - **„Sonderreinigung / Allergiker"**  
 - **„längliches Kopfkissen, nicht ganz so hoch"**
 
-**Departments:** `["housekeeping"]`
+**Departments:** `["Housekeeping"]`
 
 ---
 
@@ -187,8 +189,8 @@ If effective_guest_count > capacity → create:
 - **„Hundenapf und Leckerli mitgeben"**
 
 **Departments:**  
-- `["housekeeping"]` — Dog in room  
-- `["front-office"]` — Dog amenities (bowl, treats)
+- `["Housekeeping"]` — Dog in room  
+- `["Reception"]` — Dog amenities (bowl, treats)
 
 ---
 
@@ -202,36 +204,36 @@ If effective_guest_count > capacity → create:
 **Canonical task:**
 
 - **„Anreise: [Uhrzeit]"**  
-  **Departments:** `["front-office"]`
+  **Departments:** `["Reception"]`
 
 ---
 
 **Dayuse comments:**  
-(e.g., "Dayuse", "Dayuse room", "Dayuse RO/SZ…")
+(e.g., "Dayuse", "Dayuse room") or `ratePlanCode`/`ratePlanName` contains `DAYUSEBUSDBL2` or `DAYUSECOMDBL2`
 
-**Tasks created:**
+> Note: Dayuse logic is only valid for `context = 'reservation'`
 
-1. **Housekeeping** (`["housekeeping"]`)  
-   - *"Dayuse room cleaning after 14:00"*  
-   - Due: arrival_date @ 14:00
+**Task created:**
 
-2. **Front Office** (`["front-office"]`)  
-   - *"Dayuse booking: 09:00–14:00"*  
-   - Due: arrival date
+- **Title:** "Dayuse booking: 09:00–14:00"  
+- **Description:** "Handle dayuse booking from 09:00 to 14:00."  
+- **Departments:** `["Housekeeping", "Reception"]`  
+- **Due:** arrival date
 
-Dayuse logic **never replaces** extra-bed logic. These are always created as two separate tasks.
+Dayuse logic **never replaces** extra-bed/occupancy logic. If guest count triggers occupancy rules, both tasks are created.
 
 ---
 
 ### 3.7 Guest Birthday During Stay
 
-If **Booker Birthday** falls between **Arrival** and **Departure**:
+If **primaryGuestBirthday** falls between **arrival** and **departure** (inclusive):
 
 **Task:**
 
 - **Title:** `Guest birthday`  
 - **Description:** "The guest has a birthday during their stay."  
-- **Departments:** `["front-office"]`
+- **Departments:** `["Reception"]`  
+- **Due:** `primaryGuestBirthday`
 
 ---
 
@@ -242,22 +244,65 @@ If comment contains "?", "can you…?", "is it possible…?":
 **Task:**  
 - **„Reply to guest inquiry by email"**
 
-**Departments:** `["front-office"]`
+**Departments:** `["Reception"]`
 
 ---
 
-### 3.9 Payer / Rate / Billing Structure
+### 3.9 Payer / Rate / Billing Structure — DISABLED
 
-**Typical comments:**
+> ⚠️ **This is a disabled trace domain.** No tasks are created for these intents.
+
+**Typical comments (NO task created):**
 
 - "Company pays"  
 - "Invoice to agency"  
 - Rate abbreviations: BB, HB, FB, Corp, inkl., exkl.
 
-**Task:**  
-- **"Send invoice to correct payer"**
+**Result:** No task output — these are hard-skipped by the system prompt (falls under invoice/payer disabled domain).
 
-**Departments:** `["front-office"]` or `["reservation-manager"]`
+---
+
+### 3.10 Parking Request (Two-Stage)
+
+If any comment indicates parking is needed (e.g., "parking", "Parkplatz", "garage"):
+
+**Two tasks created:**
+
+1. **"Parking request received"**  
+   - Description: "Guest requests parking. Please check availability and reserve if applicable."  
+   - Departments: `["Reception"]`  
+   - Due: `now`
+
+2. **"Send parking details to guest"**  
+   - Description: "Send parking instructions/details to the guest for arrival."  
+   - Departments: `["Reception"]`  
+   - Due: `arrival`
+
+---
+
+### 3.11 Breakfast / Meal Plan Requested
+
+If any comment explicitly requests breakfast or a meal plan:
+
+**Task:**  
+- **Title:** "Breakfast requested" or "Mealplan requested"  
+- **Description:** "Guest requests breakfast to be included/added."  
+- **Departments:** `["Reception"]`
+
+> Note: Pure informational questions like "Is breakfast included?" are handled via the inquiry-email rule (Section 3.8) instead.
+
+---
+
+### 3.12 Follow-up Required (Safety Net)
+
+If a comment clearly requires staff follow-up (confirmation, clarification, contacting the guest) and did not produce a more specific task:
+
+**Task:**  
+- **Title:** "Follow up required"  
+- **Description:** "Guest comment requires follow-up. Review and respond/clarify as needed."  
+- **Departments:** `["Reception"]`
+
+> Guardrails: Not created if the comment already triggered "Reply to guest inquiry by email" or falls under disabled domains.
 
 ---
 
@@ -328,7 +373,7 @@ Each task contains:
 
 - **Title** (German if canonical, English if non-canonical)  
 - **Description** (English)  
-- **assigned_to** — Object with `Departments` array  
+- **assigned_to** — Object with `Department` array  
 - **Priority** — Boolean (`true` = high, `false` = normal)  
 - **Due date** — **Required** when arrival date exists (ISO 8601 datetime)  
 - **Action:** `create` or `update`  
@@ -339,9 +384,9 @@ Each task contains:
 ```json
 {
   "title": "Zustellbett vorbereiten",
-  "description": "Prepare extra bed for guest.",
+  "description": "Prepare an extra bed due to occupancy.",
   "assigned_to": {
-    "Departments": ["housekeeping", "front-office"]
+    "Department": ["Housekeeping", "Reception"]
   },
   "priority": false,
   "due": "2024-12-15T14:00:00Z",

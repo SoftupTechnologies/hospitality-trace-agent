@@ -1,0 +1,77 @@
+{
+  "name": "Release lock",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "webhook_event_key"
+            }
+          ]
+        }
+      },
+      "id": "195681a7-3ba0-423e-aa90-58ace479242e",
+      "typeVersion": 1.1,
+      "name": "Start",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -1920,
+        3168
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "webhook_event_queue",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "event_identifier",
+              "condition": "eq",
+              "keyValue": "={{ $('Start').item.json.webhook_event_key}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1712,
+        3168
+      ],
+      "id": "ef6c733f-fe1c-4f62-93bf-ceb3cb8e90cf",
+      "name": "Release lock",
+      "credentials": {
+        "supabaseApi": {
+          "id": "REDACTED",
+          "name": "REDACTED"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Release lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "REDACTED",
+  "meta": {
+    "instanceId": "REDACTED"
+  },
+  "id": "REDACTED",
+  "tags": []
+}
