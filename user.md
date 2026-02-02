@@ -1,104 +1,126 @@
-# User Prompt - Sweeply Task Generation
+# Sweeply Task Generation (Rule-Driven)
 
-Analyze the record and generate Sweeply-ready tasks based on the provided comments and structured fields
-(comments, unit details, guest counts, and primaryGuestBirthday).
+Analyze the record and generate **Sweeply-ready tasks** based on the provided comments and structured fields.
 
-Before generating tasks, **call the “Get trace logs” tool** to retrieve existing past traces for this booking and reservation.  
-Use these logs to determine whether each task should be **created**, **updated**, or **skipped**, following the system prompt rules.
+All decisions about **whether a trace is created, updated, or skipped** must follow the **system prompt** and the **Rule Book tools**.
+
+---
+
+## REQUIRED TOOL CALL ORDER
+
+Before generating any tasks, you must call tools in the following order:
+
+1. **Get System Rule Book**  
+2. **Get Property Rule Book** (pass `propertyId`)  
+3. **Get Trace Logs**
+
+The rule books are the **single source of truth** for:
+- which operational intents create traces
+- which domains are hard-disabled
+- task titles, routing, priority, and due-date logic
+
+---
 
 ## INPUT
-context: `{{ $json.context }}`
-now: `{{ $json.now }}`
 
-propertyId: `{{$json.propertyId}}`  
-propertyName: `{{$json.propertyName}}`  
-reservationId: `{{$json.reservationId}}`  
-bookingId: `{{$json.bookingId}}`  
-bookerFirstName: `{{$json.bookerFirstName}}`  
-bookerLastName: `{{$json.bookerLastName}}`  
-primaryGuestBirthday: `{{$json.primaryGuestBirthday}}`  
-primaryGuestFirstName: `{{$json.primaryGuestFirstName}}`
-primaryGuestLastName: `{{$json.primaryGuestLastName}}`
-unitId: `{{$json.unitId}}`  
-unitName: `{{$json.unitName}}`  
-unitGroupId: `{{$json.unitGroupId}}`  
-unitGroupCode: `{{$json.unitGroupCode}}`  
-unitGroupName: `{{$json.unitGroupName}}`  
-arrival: `{{$json.arrival}}`  
-departure: `{{$json.departure}}`  
-channelCode: `{{$json.channelCode}}`  
-ratePlanCode: `{{$json.ratePlanCode}}`  
-ratePlanId: `{{$json.ratePlanId}}`  
-adults: `{{$json.adults}}`  
-childrenAges: [{{ $json.childrenAges }}]
+context: `{{ $json.payload.context }}`  
+now: `{{ $json.payload.now }}`  
+
+propertyId: `{{ $json.payload.propertyId }}`  
+propertyName: `{{ $json.payload.propertyName }}`  
+
+bookingId: `{{ $json.payload.bookingId }}`  
+reservationId: `{{ $json.payload.reservationId }}`  
+
+primaryGuestBirthday: `{{ $json.payload.primaryGuestBirthday }}`  
+
+unitId: `{{ $json.payload.unitId }}`  
+unitName: `{{ $json.payload.unitName }}`  
+unitGroupId: `{{ $json.payload.unitGroupId }}`  
+unitGroupCode: `{{ $json.payload.unitGroupCode }}`  
+unitGroupName: `{{ $json.payload.unitGroupName }}`  
+
+arrival: `{{ $json.payload.arrival }}`  
+departure: `{{ $json.payload.departure }}`  
+
+channelCode: `{{ $json.payload.channelCode }}`  
+ratePlanCode: `{{ $json.payload.ratePlanCode }}`  
+ratePlanName: `{{ $json.payload.ratePlanName }}`  
+ratePlanId: `{{ $json.payload.ratePlanId }}`  
+
+adults: `{{ $json.payload.adults }}`  
+childrenAges: `[{{ $json.payload.childrenAges }}]`
+
+---
 
 ## COMMENTS
-bookerComment (booking-level): `{{$json.bookerComment}}`  
-extraBookingComment (booking-level): `{{$json.extraBookingComment}}`  
-guestComment (reservation-level): `{{$json.guestComment}}`  
-reservationComment (reservation-level): `{{$json.reservationComment}}`  
 
-## REQUIREMENTS
-- Use **only** provided fields; ignore empty or missing ones.  
-- Derive tasks from:
-  - booking- and reservation-level comments, and  
-  - structured fields (unit type, guest counts, primaryGuestBirthday, Dayuse keyword, etc.),  
-  exactly as defined in the **system prompt**.
-- Apply the system prompt logic fully, including:  
-  - routing rules  
-  - canonical title mapping  
-  - semantic interpretation  
-  - question-tone handling  
-  - disabled trace domains (hard skip)  
-  - follow-up safety-net (any comment requiring follow-up should produce a trace unless disabled / already covered)  
-  - room-location requests  
-  - twin-bed unsupported handling  
-  - parking request handling (two-stage)  
-  - Dayuse logic  
-  - extra-bed occupancy logic  
-  - birthday logic  
-  - dog Reception vs Housekeeping split
-- Split multi-intent comments into multiple tasks when required.  
-- Use optional fields only when they exist in the input.  
-- Apply due-date rules defined in the system prompt.  
+bookerComment (booking-level): `{{ $json.payload.bookerComment }}`  
+extraBookingComment (booking-level): `{{ $json.payload.extraBookingComment }}`  
+guestComment (reservation-level): `{{ $json.payload.guestComment }}`  
+reservationComment (reservation-level): `{{ $json.payload.reservationComment }}`  
 
-### Hard-disabled domains (no create, no update)
-Per the system prompt, do not output any task (no create, no update) for:
-- Credit card / payment intents (charging, adding CC, payment verification, etc.)
-- Invoice sending / payer intents (send invoice, invoice to email/company, payer corrections, etc.)
+---
 
-### Deterministic system tasks (create-or-skip only)
-Follow the system prompt rules for **deterministic** tasks:
+## PROCESSING REQUIREMENTS
 
-- Baby crib → “Babybett vorbereiten”  
-- Extra bed → “Zustellbett vorbereiten”  
-- Guest birthday → “Guest birthday”  
-- Twin bed unsupported → “Gast kontaktieren: Twin Bed nicht verfügbar”  
-- Parking request (two-stage) →  
-  - “Parking request received”  
-  - “Send parking details to guest”
-- Dayuse →  
-  - “Dayuse room cleaning after 14:00”  
-  - “Dayuse booking: 09:00–14:00”
+- Use **only** the provided input fields; ignore empty or missing values.
+- Apply **comment deduplication and scope assignment** exactly as defined in the system prompt.
+- Split multi-intent comments into **separate operational intents**.
+- Do **not** hardcode any task logic, titles, routing, or exclusions.
+- Determine all trace creation and suppression strictly via:
+  - **Get System Rule Book**
+  - **Get Property Rule Book**
 
-For these deterministic tasks:
+---
 
-- You may only **create** them if no identical non-failed task exists yet.  
-- If an identical non-failed task already exists for the same bookingId + reservationId + title + description, **skip**.  
-- You must **never output an `action: "update"`** for these tasks.
+## RULE APPLICATION
 
-### Comment-driven tasks (may update)
-For all other operational intents derived from comments:
+- Evaluate **disabled rules first**  
+  - If a disabled rule matches an intent, **do not create or update any trace** for that intent.
+- Evaluate **enabled rules** next  
+  - A trace may be created only if a matching enabled rule applies.
+- Property-specific rules may **override or extend** system-wide rules.
 
-- Use the trace logs to decide **create / update / skip** in line with the system prompt, including:
-  - same operational intent  
-  - scope (booking-level vs reservation-level)  
-  - timeline rules  
-  - “one update per operational intent per run”
+If no rule matches an intent, **no trace is created**.
 
-Every task must include an `"action"` field (`"create"` or `"update"`).  
-If updating, include `"sweeply_trace_id"` taken from the correct existing trace.
+---
 
-### OUTPUT
-- Output must be a **strict JSON array** of task objects matching the Sweeply schema.  
-- No markdown, no text outside the JSON array.
+## LIFECYCLE DECISIONS
+
+Use **Get Trace Logs** to determine for each eligible task whether to:
+
+- **create** a new trace  
+- **update** an existing trace  
+- **skip** (identical non-failed trace already exists)
+
+Follow system prompt rules strictly, including:
+- booking-level vs reservation-level scope
+- latest non-failed trace selection
+- one update per operational intent per run
+- failed traces are treated as non-existent
+
+---
+
+## OUTPUT REQUIREMENTS
+
+- Output must be a **strict JSON array** of Sweeply task objects.
+- No markdown, no explanations, no text outside the JSON array.
+- Every task must include:
+  - `"action"` (`"create"` or `"update"`)
+  - `"title"`
+  - `"description"`
+  - `"assigned_to"`
+  - `"due"`
+  - `"priority"` (Low = false, High = true)
+- If `"action": "update"`, include `"sweeply_trace_id"` from the correct existing trace.
+- Apply **character safety rules** as defined in the system prompt.
+
+---
+
+### Final Note
+
+The **Rule Books define what creates or suppresses traces**.  
+This user prompt exists only to **pass data and enforce correct tool usage**.
+
+No business logic should be inferred outside the rule books.

@@ -21,9 +21,10 @@ The system is composed of the following workflows:
 - [Setup Instructions](#setup-instructions)
   - [1. Apaleo Configuration](#1-apaleo-configuration)
   - [2. OpenAI Configuration](#2-openai-configuration)
-  - [3. Supabase Database Setup](#3-supabase-database-setup)
-  - [4. Sweeply Integration Setup](#4-sweeply-integration-setup)
-  - [5. Daily Email Report Configuration](#5-daily-email-report-configuration)
+  - [3. Rule Book Configuration (Google Sheets)](#3-rule-book-configuration-google-sheets)
+  - [4. Supabase Database Setup](#4-supabase-database-setup)
+  - [5. Sweeply Integration Setup](#5-sweeply-integration-setup)
+  - [6. Daily Email Report Configuration](#6-daily-email-report-configuration)
 - [Flow Architecture](#flow-architecture)
   - [Concurrency & Locking Mechanism](#concurrency--locking-mechanism)
 - [Usage](#usage)
@@ -37,6 +38,7 @@ Before setting up this system, ensure you have:
 
 - An active [Apaleo](https://apaleo.com/) account with access to create custom apps
 - An [OpenAI](https://platform.openai.com/) account with API access
+- A [Google](https://google.com/) account with access to Google Sheets (for rule book storage)
 - A [Supabase](https://supabase.com/) account for database storage
 - A [Sweeply](https://sweeply.com/) account for task management
 - A [Resend](https://resend.com/) account for email delivery
@@ -142,7 +144,54 @@ The system uses OpenAI's GPT-5 model for intelligent trace generation.
 6. Click **Save**
 7. The credential is now available for use in the Task Agent node
 
-### 3. Supabase Database Setup
+### 3. Rule Book Configuration (Google Sheets)
+
+The AI agent uses rule books to determine which guest and booking inputs should create operational traces. These rule books are stored in Google Sheets and are retrieved dynamically during workflow execution.
+
+#### Understanding the Rule Books
+
+The system uses two types of rule books:
+
+1. **System Rule Book** (`System_Trace_Rulebook` sheet): Defines system-wide rules for trace creation, including:
+   - Which guest/booking inputs trigger traces
+   - Hard-disabled domains (e.g., credit card intents, invoice sending)
+   - Canonical task titles and routing rules
+   - Priority and due-date logic
+
+2. **Property Rule Book** (`Property_Trace_Rulebook` sheet): Contains property-specific rules that can override or extend system defaults.
+
+#### Import the Flag Rulebook to Google Sheets
+
+1. Open your Google Drive account
+2. Navigate to **Google Sheets** and create a new spreadsheet named **"Flag Rulebook"**
+3. Download and open the `Flag Rulebook.xlsx` file from this repository
+4. Import each sheet from the Excel file into the Google Sheet:
+   - **System_Trace_Rulebook**: Contains the master rules for trace generation
+   - **Property_Trace_Rulebook**: Contains property-specific configurations
+5. Note the **Google Sheets document ID** from the URL:
+   - The URL format is: `https://docs.google.com/spreadsheets/d/DOCUMENT_ID/edit`
+   - Copy the `DOCUMENT_ID` part - you will need it for the workflow configuration
+
+#### Configure Google Sheets Credentials in n8n
+
+1. In the **Sub Trace Ai Agent** workflow, locate the **Get System Rule Book** node
+2. Click on the **Credential to connect with** dropdown
+3. Select **Create New Credential** or an existing Google account
+4. Click **Sign in with Google** and authenticate with your Google account
+5. Grant n8n permission to access your Google Sheets
+6. The credential is now available for use in both rule book nodes
+
+#### Update Workflow Nodes
+
+After creating the Google Sheets credential:
+
+1. In the **Get System Rule Book** node:
+   - Select your Google account from the credential dropdown
+   - In the **Document** field, select your **Flag Rulebook** spreadsheet
+   - In the **Sheet** field, select **System_Trace_Rulebook**
+2. Repeat for the **Get Property Rule Book** node, selecting the **Property_Trace_Rulebook** sheet
+
+### 5. Supabase Database Setup
 
 #### Create Supabase Account and Project
 
@@ -209,7 +258,7 @@ The system integrates with Sweeply for task management. You need to configure Ba
 
 The workflow sends a `pms: "apaleo"` parameter with each request to identify the source PMS system.
 
-### 5. Daily Email Report Configuration
+### 6. Daily Email Report Configuration
 
 The **Daily Traces Email** workflow sends a daily summary report at 23:59 containing all traces generated during the day.
 
@@ -531,7 +580,8 @@ The **Sub - Trace Ai Agent** sub-workflow is called by both main workflows and c
 
 1. **Task agent**: LangChain AI agent powered by GPT-5
    - Analyzes booking/reservation comments and data
-   - Uses "Get trace logs" tool to retrieve existing tasks for the booking
+   - Uses **Get System Rule Book** and **Get Property Rule Book** tools to retrieve trace generation rules
+   - Uses **Get trace logs** tool to retrieve existing tasks for the booking
    - Applies business rules (occupancy logic, disabled domains, canonical mappings)
    - Outputs JSON array of tasks
    - **Department Rules**:
@@ -539,13 +589,18 @@ The **Sub - Trace Ai Agent** sub-workflow is called by both main workflows and c
      - **Housekeeping**: Cleaning, room prep, amenities, beds, pet in room
      - **Technik**: Maintenance, broken items
 
-2. **Structured Output Parser**: Validates AI output matches the defined Sweeply schema
+2. **Rule Book Tools**: Google Sheets integration for dynamic rule management
+   - **Get System Rule Book**: Retrieves system-wide rules from the `System_Trace_Rulebook` sheet
+   - **Get Property Rule Book**: Retrieves property-specific rules from the `Property_Trace_Rulebook` sheet
+   - Rules are loaded dynamically during each execution, allowing updates without redeploying workflows
 
-3. **If no traces**: Checks if the AI generated any tasks
+3. **Structured Output Parser**: Validates AI output matches the defined Sweeply schema
+
+4. **If no traces**: Checks if the AI generated any tasks
    - If empty: Releases lock and exits
    - If tasks exist: Proceeds to enrichment
 
-4. **Map booking details to tasks**: Enriches AI-generated tasks with booking/reservation metadata (IDs, guest names, unit details, property info)
+5. **Map booking details to tasks**: Enriches AI-generated tasks with booking/reservation metadata (IDs, guest names, unit details, property info)
 
 5. **Sweeply Basic Auth Token**: Generates authentication header for Sweeply API
 
@@ -605,6 +660,7 @@ After importing the workflows into n8n, you need to configure the following valu
 | Placeholder | Workflow File | Node/Location | What to Replace With |
 |------------|---------------|---------------|---------------------|
 | `REDACTED:REDACTED` | Sub Trace Ai Agent.json | Sweeply Basic Auth Token node | Your Sweeply credentials in format `username:password` (will be base64 encoded automatically) |
+| Google account | Sub Trace Ai Agent.json | Get System Rule Book & Get Property Rule Book nodes | Your Google account credential (sign in via Google from n8n) |
 
 #### Daily Traces Email Workflow
 
@@ -624,6 +680,7 @@ The following credentials need to be configured through n8n's credential manager
 |----------------|---------|---------|
 | Apaleo OAuth2 | Booking Traces, Reservation Traces | API access to fetch booking/reservation data |
 | OpenAI API | Sub Trace Ai Agent | AI model for task generation |
+| Google account | Sub Trace Ai Agent | Access to rule books stored in Google Sheets |
 | Supabase API | Sub Trace Ai Agent, Manage Lock, Release Lock | Database access for trace logs and locking |
 | PostgreSQL | Daily Traces Email | Database queries for daily reports |
 
