@@ -7,7 +7,7 @@
           "__rl": true,
           "value": "REDACTED",
           "mode": "list",
-          "cachedResultName": "Apaleo AI Agents — Manage lock - create and wait"
+          "cachedResultName": "Apaleo AI Agents \u2014 Manage lock - create and wait"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -84,7 +84,7 @@
           "__rl": true,
           "value": "REDACTED",
           "mode": "list",
-          "cachedResultName": "Apaleo AI Agents — Sub - Trace Ai Agent"
+          "cachedResultName": "Apaleo AI Agents \u2014 Sub - Trace Ai Agent"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -218,7 +218,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// n8n Code node (JavaScript)\n// Purpose: Extract booking + (optional) reservation details\n// resCtx is the ONLY reservation source. No fallbacks.\n\n// --------------------\n// Read upstream sources\n// --------------------\nconst booking = $('Get booking details').first().json;\n\nconst resCtx = $('Get reservation').first().json;\n\nconst context = 'reservation';\nconst now = new Date().toISOString();\n\nfunction isDateBetweenUTC(date, startDate, endDate) {\n  const toUTCDateOnly = (d) => {\n    const x = new Date(d);\n    return Date.UTC(\n      x.getUTCFullYear(),\n      x.getUTCMonth(),\n      x.getUTCDate()\n    );\n  };\n\n  const target = toUTCDateOnly(date);\n  const start  = toUTCDateOnly(startDate);\n  const end    = toUTCDateOnly(endDate);\n\n  return target >= start && target <= end;\n}\n\n// --------------------\n// Booker & Guest\n// --------------------\nconst booker = booking?.booker || {};\nconst primaryGuest = resCtx?.primaryGuest || {};\n\n// --------------------\n// Identifiers\n// --------------------\nconst bookingId = booking?.id || null;\nconst reservationId = resCtx?.id || null;\n\n// --------------------\n// Booker fields\n// --------------------\nconst bookerFirstName = booker?.firstName || null;\nconst bookerLastName  = booker?.lastName || null;\n\nconst primaryGuestFirstName = primaryGuest?.firstName || null;\nconst primaryGuestLastName  = primaryGuest?.lastName || null;\nconst primaryGuestBirthday  = primaryGuest?.birthDate || null;\n\n// --------------------\n// Comments\n// --------------------\nconst bookerComment = null;\nconst extraBookingComment = null;\n\n// TODO: Temp disable\nconst reservationComment = null;\n  // typeof resCtx?.comment === 'string'\n  //   ? resCtx.comment\n  //   : null;\n\nconst guestComment =\n  typeof resCtx?.guestComment === 'string'\n    ? resCtx.guestComment\n    : null;\n\n// --------------------\n// Unit / Unit Group / Property\n// --------------------\nconst unit = resCtx?.unit || {};\nconst unitGroup = resCtx?.unitGroup || {};\nconst property =\n  resCtx?.property\n  || booking?.reservations?.[0]?.property\n  || {};\n\n// --------------------\n// Reservation details\n// --------------------\nconst arrival = resCtx?.arrival || null;\nconst departure = resCtx?.departure || null;\n\nconst isUserBirthday = primaryGuestBirthday && arrival && departure ? isDateBetweenUTC(primaryGuestBirthday, arrival, departure) : false\n\nconst adults =\n  typeof resCtx?.adults === 'number'\n    ? resCtx.adults\n    : null;\n\nconst childrenAges = Array.isArray(resCtx?.childrenAges)\n  ? resCtx.childrenAges\n  : [];\n\nconst channelCode = resCtx?.channelCode || null;\nconst ratePlanCode = resCtx?.ratePlan?.code || null;\nconst ratePlanName = resCtx?.ratePlan?.name || null;\nconst ratePlanId = resCtx?.ratePlan?.id || null;\n\n// --------------------\n// Debug / trace context\n// --------------------\nconst sourceComments = `\nGuest Comment: ${guestComment}\nReservation Comment: ${reservationComment}\n`.trim();\n\n// --------------------\n// Final output (single item)\n// --------------------\nreturn [\n  {\n    json: {\n      context,\n      now,\n      // Identifiers\n      propertyId: property?.id || null,\n      propertyName: property?.name || null,\n      bookingId,\n      reservationId,\n\n      // Booker\n      bookerFirstName,\n      bookerLastName,\n      primaryGuestFirstName,\n      primaryGuestLastName,\n      primaryGuestBirthday,\n      isUserBirthday,\n\n      // Comments\n      bookerComment,\n      extraBookingComment,\n      reservationComment,\n      guestComment,\n\n      // Unit\n      unitId: unit?.id || null,\n      unitName: unit?.name || null,\n      unitDescription: unit?.description || null,\n      unitGroupIdFromUnit: unit?.unitGroupId || null,\n\n      // Unit group\n      unitGroupId: unitGroup?.id || null,\n      unitGroupCode: unitGroup?.code || null,\n      unitGroupName: unitGroup?.name || null,\n      unitGroupType: unitGroup?.type || null,\n\n      // Stay details\n      arrival,\n      departure,\n      adults,\n      childrenAges,\n      channelCode,\n      ratePlanCode,\n      ratePlanName,\n      ratePlanId,\n\n      // Trace/debug\n      sourceComments,\n    },\n  },\n];\n"
+        "jsCode": "// n8n Code node (JavaScript)\n// Purpose: Extract booking + (optional) reservation details\n// resCtx is the ONLY reservation source. No fallbacks.\n\n// --------------------\n// Read upstream sources\n// --------------------\nconst booking = $('Get booking details').first().json;\n\nconst resCtx = $('Get reservation').first().json;\n\nconst context = 'reservation';\nconst now = new Date().toISOString();\n\nfunction isDateBetweenUTC(date, startDate, endDate) {\n  const toUTCDateOnly = (d) => {\n    const x = new Date(d);\n    return Date.UTC(\n      x.getUTCFullYear(),\n      x.getUTCMonth(),\n      x.getUTCDate()\n    );\n  };\n\n  const target = toUTCDateOnly(date);\n  const start  = toUTCDateOnly(startDate);\n  const end    = toUTCDateOnly(endDate);\n\n  return target >= start && target <= end;\n}\n\n// --------------------\n// Booker & Guest\n// --------------------\nconst booker = booking?.booker || {};\nconst primaryGuest = resCtx?.primaryGuest || {};\n\n// --------------------\n// Identifiers\n// --------------------\nconst bookingId = booking?.id || null;\nconst reservationId = resCtx?.id || null;\n\n// --------------------\n// Booker fields\n// --------------------\nconst bookerFirstName = booker?.firstName || null;\nconst bookerLastName  = booker?.lastName || null;\n\nconst primaryGuestFirstName = primaryGuest?.firstName || null;\nconst primaryGuestLastName  = primaryGuest?.lastName || null;\nconst primaryGuestBirthday  = primaryGuest?.birthDate || null;\n\n// --------------------\n// Comments\n// --------------------\nconst bookerComment = null;\nconst extraBookingComment = null;\n\nconst reservationComment =\n  typeof resCtx?.comment === 'string'\n    ? resCtx.comment\n    : null;\n\nconst guestComment =\n  typeof resCtx?.guestComment === 'string'\n    ? resCtx.guestComment\n    : null;\n\n// --------------------\n// Unit / Unit Group / Property\n// --------------------\nconst unit = resCtx?.unit || {};\nconst unitGroup = resCtx?.unitGroup || {};\nconst property =\n  resCtx?.property\n  || booking?.reservations?.[0]?.property\n  || {};\n\n// --------------------\n// Reservation details\n// --------------------\nconst arrival = resCtx?.arrival || null;\nconst departure = resCtx?.departure || null;\n\nconst isUserBirthday = primaryGuestBirthday && arrival && departure ? isDateBetweenUTC(primaryGuestBirthday, arrival, departure) : false\n\nconst adults =\n  typeof resCtx?.adults === 'number'\n    ? resCtx.adults\n    : null;\n\nconst childrenAges = Array.isArray(resCtx?.childrenAges)\n  ? resCtx.childrenAges\n  : [];\n\nconst channelCode = resCtx?.channelCode || null;\nconst ratePlanCode = resCtx?.ratePlan?.code || null;\nconst ratePlanName = resCtx?.ratePlan?.name || null;\nconst ratePlanId = resCtx?.ratePlan?.id || null;\n\n// --------------------\n// Debug / trace context\n// --------------------\nconst sourceComments = `\nGuest Comment: ${guestComment}\nReservation Comment: ${reservationComment}\n`.trim();\n\n// --------------------\n// Final output (single item)\n// --------------------\nreturn [\n  {\n    json: {\n      context,\n      now,\n      // Identifiers\n      propertyId: property?.id || null,\n      propertyName: property?.name || null,\n      bookingId,\n      reservationId,\n\n      // Booker\n      bookerFirstName,\n      bookerLastName,\n      primaryGuestFirstName,\n      primaryGuestLastName,\n      primaryGuestBirthday,\n      isUserBirthday,\n\n      // Comments\n      bookerComment,\n      extraBookingComment,\n      reservationComment,\n      guestComment,\n\n      // Unit\n      unitId: unit?.id || null,\n      unitName: unit?.name || null,\n      unitDescription: unit?.description || null,\n      unitGroupIdFromUnit: unit?.unitGroupId || null,\n\n      // Unit group\n      unitGroupId: unitGroup?.id || null,\n      unitGroupCode: unitGroup?.code || null,\n      unitGroupName: unitGroup?.name || null,\n      unitGroupType: unitGroup?.type || null,\n\n      // Stay details\n      arrival,\n      departure,\n      adults,\n      childrenAges,\n      channelCode,\n      ratePlanCode,\n      ratePlanName,\n      ratePlanId,\n\n      // Trace/debug\n      sourceComments,\n    },\n  },\n];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -235,7 +235,7 @@
           "__rl": true,
           "value": "REDACTED",
           "mode": "list",
-          "cachedResultName": "Apaleo AI Agents — Release lock"
+          "cachedResultName": "Apaleo AI Agents \u2014 Release lock"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -375,6 +375,16 @@
               "operator": {
                 "type": "string",
                 "operation": "notContains"
+              }
+            },
+            {
+              "id": "de3db317-10e9-40a1-bb8d-5933a1d1fc03",
+              "leftValue": "={{ $json.reservationComment }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
               }
             }
           ],
