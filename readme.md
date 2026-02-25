@@ -40,7 +40,7 @@ Before setting up this system, ensure you have:
 - An [OpenAI](https://platform.openai.com/) account with API access
 - A [Google](https://google.com/) account with access to Google Sheets (for rule book storage)
 - A [Supabase](https://supabase.com/) account for database storage
-- A [Sweeply](https://sweeply.com/) account for task management
+- A [Sweeply](https://getsweeply.com/) account for task management
 - A [Resend](https://resend.com/) account for email delivery
 - An n8n instance (cloud)
 
